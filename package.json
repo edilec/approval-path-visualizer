@@ -1,0 +1,17 @@
+{
+  "name": "approval-path-visualizer",
+  "version": "0.0.0",
+  "description": "Render approvals as a path showing owners, conditions and exception exits.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/edilec/approval-path-visualizer"
+  }
+}
