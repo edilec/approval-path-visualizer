@@ -1,17 +1,52 @@
 {
   "name": "approval-path-visualizer",
-  "version": "0.0.0",
-  "description": "Render approvals as a path showing owners, conditions and exception exits.",
+  "version": "0.1.0",
+  "description": "Read an approval DAG and render an escaped local SVG or HTML diagram of its approvers, conditions, timeouts and exception exits, diagnosing unreachable steps and approval cycles.",
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test"
+    "lint": "node --check src/index.mjs && node --check src/text.mjs && node --check src/graph.mjs && node --check src/render.mjs && node --check bin/approval-path-visualizer.mjs && node --check test/support.mjs && node --check test/text.test.mjs && node --check test/graph.test.mjs && node --check test/analysis.test.mjs && node --check test/render.test.mjs && node --check test/escaping.test.mjs && node --check test/limits.test.mjs && node --check test/confinement.test.mjs && node --check test/guarantees.test.mjs && node --check test/sanitisation.test.mjs && node --check test/severity-table.test.mjs && node --check test/severity-behaviour.test.mjs && node --check test/ordering.test.mjs && node --check test/cli.test.mjs",
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=src/**",
+    "example": "node bin/approval-path-visualizer.mjs --root examples/clean --graph approval.json --out build/approval-path.svg",
+    "pack:check": "npm pack --dry-run",
+    "check": "npm run lint && npm test && npm run example && npm run pack:check"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/edilec/approval-path-visualizer"
-  }
+    "url": "git+https://github.com/edilec/approval-path-visualizer.git"
+  },
+  "bin": {
+    "approval-path-visualizer": "./bin/approval-path-visualizer.mjs"
+  },
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "examples",
+    "docs",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "approval",
+    "workflow",
+    "dag",
+    "diagram",
+    "svg",
+    "escaping",
+    "cycle-detection",
+    "cli"
+  ],
+  "author": "Edilec Private Limited",
+  "bugs": {
+    "url": "https://github.com/edilec/approval-path-visualizer/issues"
+  },
+  "homepage": "https://github.com/edilec/approval-path-visualizer#readme"
 }
