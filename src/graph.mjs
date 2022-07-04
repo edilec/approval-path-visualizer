@@ -37,6 +37,7 @@ const LABEL_SITES = Object.freeze({
   approver: 'approver name',
   condition: 'condition',
   reason: 'exception reason',
+  outcome: 'outcome',
   name: 'graph name',
 })
 
@@ -48,8 +49,18 @@ function add(problems, problem) {
   problems.push({ evidence: undefined, suggestion: undefined, incomplete: false, ...problem })
 }
 
-/** Report and strip control characters carried by an untrusted display string. */
-function displayText(problems, pointer, site, value) {
+/**
+ * Report and strip what an untrusted display string may not carry, and bound
+ * its length.
+ *
+ * Every label, approver name, condition, exception reason and graph name goes
+ * through here on its way to a finding or a diagram. The length bound is the
+ * one that keeps a box a sane size, and going over it is a finding naming the
+ * limit -- the diagram then shows the value cut short and marked with an
+ * ellipsis, so a reader sees that something was cut rather than reading a
+ * shortened condition as the whole condition.
+ */
+function displayText(problems, pointer, site, value, limits) {
   if (hasControlCharacters(value)) {
     add(problems, {
       ruleId: 'label-control-characters',
@@ -59,7 +70,16 @@ function displayText(problems, pointer, site, value) {
       suggestion: 'Remove the control characters from the source graph; a diagram cannot show what they would do.',
     })
   }
-  return excerpt(value)
+  if (value.length > limits.maxLabelLength) {
+    add(problems, {
+      ruleId: 'label-too-long',
+      pointer,
+      message: `The ${LABEL_SITES[site]} is ${value.length} characters, above the maxLabelLength limit of ${limits.maxLabelLength}; the diagram shows it cut short and marked with an ellipsis.`,
+      evidence: excerpt(value, 60),
+      suggestion: 'Shorten it, or raise --max-label-length.',
+    })
+  }
+  return excerpt(value, limits.maxLabelLength)
 }
 
 function unknownKeys(problems, ruleId, value, allowed, pointerPrefix, what) {
@@ -146,7 +166,7 @@ function compileNode(problems, raw, index, limits) {
       suggestion: 'Shorten the label, or raise --max-label-length.',
     })
   } else {
-    label = displayText(problems, `${pointer}/label`, 'label', raw.label) || id
+    label = displayText(problems, `${pointer}/label`, 'label', raw.label, limits) || id
   }
 
   const approvers = []
@@ -174,7 +194,7 @@ function compileNode(problems, raw, index, limits) {
       if (typeof entry !== 'string' || entry.trim() === '') {
         return drop('Every approver must be a non-empty string.', `approvers/${position}`)
       }
-      const name = displayText(problems, `${pointer}/approvers/${position}`, 'approver', entry)
+      const name = displayText(problems, `${pointer}/approvers/${position}`, 'approver', entry, limits)
       if (seen.has(name)) {
         add(problems, {
           ruleId: 'approvers-duplicate',
@@ -217,7 +237,7 @@ function compileNode(problems, raw, index, limits) {
       let condition = null
       if (entry.condition !== undefined) {
         if (typeof entry.condition !== 'string') return drop('An edge condition must be a string.', `${edgeAt}/condition`)
-        condition = displayText(problems, `${pointer}/${edgeAt}/condition`, 'condition', entry.condition)
+        condition = displayText(problems, `${pointer}/${edgeAt}/condition`, 'condition', entry.condition, limits)
         if (condition === '') condition = null
       }
       edges.push({ to: entry.to, condition })
@@ -266,7 +286,7 @@ function compileNode(problems, raw, index, limits) {
       let reason = null
       if (entry.reason !== undefined) {
         if (typeof entry.reason !== 'string') return drop('An exception reason must be a string.', `${exitAt}/reason`)
-        reason = displayText(problems, `${pointer}/${exitAt}/reason`, 'reason', entry.reason)
+        reason = displayText(problems, `${pointer}/${exitAt}/reason`, 'reason', entry.reason, limits)
         if (reason === '') reason = null
       }
       if (reason === null) {
@@ -287,7 +307,7 @@ function compileNode(problems, raw, index, limits) {
       return drop(`An outcome node must declare an outcome of ${OUTCOME_VALUES.join(', ')}.`, 'outcome')
     }
     if (typeof raw.outcome !== 'string') return drop('An outcome must be a string.', 'outcome')
-    outcome = excerpt(raw.outcome, 40)
+    outcome = displayText(problems, `${pointer}/outcome`, 'outcome', raw.outcome, limits)
     if (!OUTCOME_VALUES.includes(outcome)) {
       add(problems, {
         ruleId: 'outcome-value-unknown',
@@ -364,7 +384,7 @@ export function compileGraph(value, limits) {
     })
     return { graph: null, problems }
   } else {
-    name = displayText(problems, '/name', 'name', value.name)
+    name = displayText(problems, '/name', 'name', value.name, limits)
   }
 
   if (!Array.isArray(value.nodes)) {

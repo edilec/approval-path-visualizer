@@ -33,24 +33,23 @@ const HEADER_LINE = 20
 const LEGEND_HEIGHT = 58
 const LABEL_CHAR_WIDTH = 7
 const BACK_EDGE_BULGE = 96
-const MAX_LABEL_LINES = 3
-const MAX_META_LINES = 2
+const LABEL_LINE = 12
 
 /** One text line inside a node box, with the class that styles it. */
 function boxLines(node, flags) {
-  const lines = wrapText(node.label, BOX_CHARS, MAX_LABEL_LINES).map((text) => ({ text, role: 'title' }))
+  const lines = wrapText(node.label, BOX_CHARS).map((text) => ({ text, role: 'title' }))
   if (lines.length === 0) lines.push({ text: node.id, role: 'title' })
 
   if (node.kind === 'approval') {
     const approvers = node.approvers.length === 0
       ? ['approvers: none named']
-      : wrapText(`approvers: ${node.approvers.join(', ')}`, BOX_CHARS, MAX_META_LINES)
+      : wrapText(`approvers: ${node.approvers.join(', ')}`, BOX_CHARS)
     for (const text of approvers) lines.push({ text, role: 'meta' })
   }
   if (node.outcome !== null) lines.push({ text: `outcome: ${node.outcome}`, role: 'meta' })
   if (node.timeout !== null) {
     const after = node.timeout.after === null ? 'unreadable duration' : node.timeout.after
-    for (const text of wrapText(`timeout ${after} to ${node.timeout.to}`, BOX_CHARS, MAX_META_LINES)) {
+    for (const text of wrapText(`timeout ${after} to ${node.timeout.to}`, BOX_CHARS)) {
       lines.push({ text, role: 'meta' })
     }
   }
@@ -150,13 +149,29 @@ function linkPath(from, to) {
   }
 }
 
+/**
+ * The condition, timeout or reason written on an arrow.
+ *
+ * Wrapped rather than cut: the value is already bounded by `maxLabelLength`,
+ * and a condition shown as its first thirty characters reads like the whole
+ * condition to anyone looking at the picture.
+ */
 function edgeLabel(text, x, y) {
-  const shown = markupText(text, BOX_CHARS)
-  const width = Math.max(24, shown.length * LABEL_CHAR_WIDTH)
-  return [
-    `    <rect class="link-label-box" x="${Math.round(x - width / 2)}" y="${y - 11}" width="${width}" height="16" rx="3" />`,
-    `    <text class="link-label" x="${x}" y="${y}" text-anchor="middle">${shown}</text>`,
-  ].join('\n')
+  const lines = wrapText(text, BOX_CHARS)
+  if (lines.length === 0) return ''
+  const width = Math.max(24, Math.max(...lines.map((line) => line.length)) * LABEL_CHAR_WIDTH)
+  const top = y - 11 - (lines.length - 1) * LABEL_LINE
+  const parts = [
+    `    <rect class="link-label-box" x="${Math.round(x - width / 2)}" y="${top}" ` +
+    `width="${width}" height="${16 + (lines.length - 1) * LABEL_LINE}" rx="3" />`,
+  ]
+  for (const [index, line] of lines.entries()) {
+    parts.push(
+      `    <text class="link-label" x="${x}" y="${y - (lines.length - 1 - index) * LABEL_LINE}" ` +
+      `text-anchor="middle">${markupText(line)}</text>`,
+    )
+  }
+  return parts.join('\n')
 }
 
 const STYLE = [

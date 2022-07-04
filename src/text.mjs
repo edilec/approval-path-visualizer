@@ -187,10 +187,12 @@ export function parseDuration(value) {
  * Pure, deterministic and independent of any font metric: the diagram uses a
  * fixed-advance layout, so counting characters is what decides the box height.
  * A word longer than the whole line is hard-split rather than allowed to run
- * out of the box -- nothing is dropped, because a label that silently loses
- * its tail misrepresents the step it names.
+ * out of the box, and there is no line cap: nothing is dropped here, because a
+ * label that silently loses its tail misrepresents the step it names. What
+ * bounds the height is `maxLabelLength`, enforced with a finding of its own
+ * before any value reaches this function.
  */
-export function wrapText(value, width, maxLines) {
+export function wrapText(value, width) {
   const flattened = excerpt(value, Number.MAX_SAFE_INTEGER)
   if (flattened === '') return []
   const lines = []
@@ -217,11 +219,5 @@ export function wrapText(value, width, maxLines) {
     }
   }
   push()
-
-  if (maxLines !== undefined && lines.length > maxLines) {
-    const kept = lines.slice(0, maxLines - 1)
-    kept.push(`${lines.slice(maxLines - 1).join(' ').slice(0, Math.max(1, width - 3))}...`)
-    return kept
-  }
   return lines
 }
