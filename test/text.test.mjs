@@ -30,13 +30,13 @@ test('hasControlCharacters sees what excerpt removes, and nothing else', () => {
   assert.equal(hasControlCharacters('plain text'), false)
   assert.equal(hasControlCharacters('a line\nbreak'), false)
   assert.equal(hasControlCharacters('bell'), true)
-  assert.equal(hasControlCharacters('nel'), true)
-  assert.equal(hasControlCharacters('override‮'), true)
+  assert.equal(hasControlCharacters('nel\u0085'), true)
+  assert.equal(hasControlCharacters('override\u202e'), true)
 })
 
 test('isIdentifier refuses empty, padded, over-long and control-bearing values', () => {
   assert.equal(isIdentifier('finance-review'), true)
-  assert.equal(isIdentifier('مقال-2'), true)
+  assert.equal(isIdentifier('\u0645\u0642\u0627\u0644-2'), true)
   assert.equal(isIdentifier(''), false)
   assert.equal(isIdentifier(' padded'), false)
   assert.equal(isIdentifier('x'.repeat(121)), false)
@@ -49,7 +49,7 @@ test('decodeUtf8 refuses undecodable bytes and never guesses from the text', () 
   assert.equal(decodeUtf8(Buffer.from([0xff, 0xfe, 0x41])).ok, false)
   // A file that legitimately holds U+FFFD decodes; inferring "not UTF-8" from
   // the decoded text is the confusion that let an unread input report a pass.
-  assert.equal(decodeUtf8(Buffer.from('�', 'utf8')).ok, true)
+  assert.equal(decodeUtf8(Buffer.from('\ufffd', 'utf8')).ok, true)
 })
 
 test('escapeMarkup escapes all five characters, ampersand first', () => {
@@ -62,9 +62,9 @@ test('escapeMarkup escapes all five characters, ampersand first', () => {
 })
 
 test('markupText sanitises before it escapes', () => {
-  const hostile = '<script>‮alert(1)</script>'
+  const hostile = '<script>\u202ealert(1)</script>'
   const rendered = markupText(hostile)
-  assert.equal(rendered.includes('‮'), false)
+  assert.equal(rendered.includes('\u202e'), false)
   assert.equal(rendered.includes('<'), false)
   assert.equal(rendered, '&lt;script&gt; alert(1)&lt;/script&gt;')
 })
