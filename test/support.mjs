@@ -8,7 +8,7 @@
  */
 
 import { execFile } from 'node:child_process'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -75,6 +75,7 @@ export async function workspace(body, { graph = GRAPH, file = GRAPH_FILE } = {})
       const bytes = typeof graph === 'string' || Buffer.isBuffer(graph)
         ? graph
         : `${JSON.stringify(graph, null, 2)}\n`
+      await mkdir(dirname(join(root, file)), { recursive: true })
       await writeFile(join(root, file), bytes)
     }
     return await body({ root, outside, out: join(outside, 'diagram.svg'), graphPath: join(root, file) })

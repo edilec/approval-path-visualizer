@@ -435,8 +435,18 @@ export function compileGraph(value, limits) {
     nodes.push(node)
   }
 
+  /**
+   * The start step is only judged once at least one step has been read.
+   *
+   * A graph that declared no usable node has nothing for a start to name, and
+   * reporting the start as unknown as well would bury the finding that
+   * matters -- that this run read no approval step at all -- under a second
+   * one that is merely its consequence.
+   */
   let start = null
-  if (value.start === undefined) {
+  if (nodes.length === 0) {
+    start = null
+  } else if (value.start === undefined) {
     add(problems, {
       ruleId: 'start-missing',
       pointer: '/start',
