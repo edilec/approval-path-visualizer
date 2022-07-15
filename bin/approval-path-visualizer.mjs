@@ -111,10 +111,12 @@ function parseArguments(argv) {
       if (!/^\d+$/.test(raw) || Number(raw) < 1) throw new Error(`${argument} requires a positive integer`)
       options.limits[LIMIT_FLAGS.get(argument)] = Number(raw)
     } else {
-      // The unknown option is echoed back, so it is sanitised like any other
-      // untrusted string: an argument carrying a NEL or a bidi override must
-      // not forge a line on its way to stderr either.
-      throw new Error(`Unknown option "${excerpt(argument, 60)}"`)
+      // The unknown option is echoed back, so it is untrusted like any other
+      // value this tool prints: an argument carrying a NEL or a bidi override
+      // must not forge a line on its way to stderr. Every message thrown here
+      // goes through one sanitising pass in `main`, which is the only place a
+      // diagnostic reaches the stream.
+      throw new Error(`Unknown option "${argument}"`)
     }
   }
 

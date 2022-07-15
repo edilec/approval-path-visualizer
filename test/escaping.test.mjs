@@ -2,12 +2,9 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { visualizeApprovalPath } from '../src/index.mjs'
-import { GRAPH, attributeNames, elementNames, graphWith, step, tagsBalance, workspace } from './support.mjs'
-
-/** Everything between `<` and `>`: element names and attributes, no text content. */
-function insideTags(markup) {
-  return (markup.match(/<[A-Za-z][^<>]*>/g) ?? []).join(' ')
-}
+import {
+  GRAPH, attributeNames, attributes, elementNames, graphWith, step, tagsBalance, tagsWellFormed, workspace,
+} from './support.mjs'
 
 /**
  * Escaping is the security property of this tool, so it is tested by what the
@@ -106,15 +103,24 @@ for (const format of ['svg', 'html']) {
         for (const name of elementNames(diagram)) assert.ok(baselineElements.includes(name), `${where}: <${name}>`)
         for (const name of attributeNames(diagram)) assert.ok(baselineAttributes.includes(name), `${where}: ${name}=`)
         assert.equal(tagsBalance(diagram), true, where)
+        assert.equal(tagsWellFormed(diagram), true, `${where}: a tag stopped being a name="value" list`)
 
         // The shapes named in this tool's brief, asserted literally. The
-        // handler and the scheme are checked inside tags only: as escaped TEXT
-        // the words are inert and must survive, which is the point.
+        // handler and the scheme are looked for where they would do something
+        // -- an attribute NAME, an attribute VALUE -- because as escaped text
+        // the same words are inert and must survive, which is the point.
         assert.equal(diagram.includes('<script'), false, where)
         assert.equal(diagram.includes('<!--'), false, where)
         assert.equal(diagram.includes(']]>'), false, where)
-        assert.equal(insideTags(diagram).includes('onload'), false, where)
-        assert.equal(insideTags(diagram).includes('javascript:'), false, where)
+        for (const [name, value] of attributes(diagram)) {
+          assert.equal(name.startsWith('on'), false, `${where}: ${name}= is an event handler`)
+          assert.equal(value.startsWith('javascript:'), false, `${where}: ${name}= names a script URL`)
+        }
+
+        // Nothing this renderer writes contains an apostrophe, so one in the
+        // document could only have come from a payload that was not escaped.
+        assert.equal(diagram.includes("'"), false, `${where}: a raw apostrophe`)
+        if (payload.includes("'")) assert.ok(diagram.includes('&#39;'), where)
 
         // Rendered as text rather than dropped: the payload's own marker
         // survives, and the characters it would have used are escaped.

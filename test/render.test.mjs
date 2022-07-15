@@ -80,7 +80,9 @@ test('a step on a cycle is marked as one', () => {
   ])
   value.nodes.find((node) => node.id === 'intake').edges.push({ to: 'legal', condition: 'legal involved' })
   const { diagram } = render(value)
-  assert.equal((diagram.match(/! on an approval cycle/g) ?? []).length, 2)
+  // Matched as text content: the same words also appear in each group's
+  // aria-label, which is the accessible rendering of the very same box.
+  assert.equal((diagram.match(/>! on an approval cycle</g) ?? []).length, 2)
 })
 
 test('a diagram drawn from incomplete evidence says so on its face', () => {

@@ -130,13 +130,41 @@ export function elementNames(markup) {
   return [...names].sort()
 }
 
-/** Every attribute name the rendered document contains. */
-export function attributeNames(markup) {
-  const names = new Set()
+/**
+ * A tag whose attributes are all `name="value"` with no raw quote inside a
+ * value -- which is exactly what an escaped document produces, and exactly
+ * what a payload breaking out of an attribute would stop producing.
+ */
+const WELL_FORMED_TAG = /^<\/?[A-Za-z][\w:-]*(?:\s+[A-Za-z][\w:-]*="[^"]*")*\s*\/?>$/
+
+/** Every attribute of every tag, as `[name, value]` pairs. */
+export function attributes(markup) {
+  const pairs = []
   for (const element of markup.matchAll(/<[A-Za-z][^<>]*>/g)) {
-    for (const match of element[0].matchAll(/[\s"']([A-Za-z][\w:-]*)\s*=/g)) names.add(match[1].toLowerCase())
+    for (const match of element[0].matchAll(/\s([A-Za-z][\w:-]*)="([^"]*)"/g)) {
+      pairs.push([match[1].toLowerCase(), match[2]])
+    }
   }
-  return [...names].sort()
+  return pairs
+}
+
+/** Every attribute name the rendered document contains, read from well-formed tags only. */
+export function attributeNames(markup) {
+  return [...new Set(attributes(markup).map(([name]) => name))].sort()
+}
+
+/**
+ * True when every tag in the document is well formed.
+ *
+ * This is what catches an unescaped quote: a value that closes its own
+ * attribute leaves a tag whose remainder is not a `name="value"` list, whether
+ * or not the name it invented happens to be one the renderer also emits.
+ */
+export function tagsWellFormed(markup) {
+  for (const element of markup.matchAll(/<\/?[A-Za-z][^<>]*>/g)) {
+    if (!WELL_FORMED_TAG.test(element[0])) return false
+  }
+  return true
 }
 
 /**

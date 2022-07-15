@@ -311,17 +311,25 @@ function renderSvg(graph, analysis, report, header, layout) {
       if (box.node.kind === 'outcome') classes.push('box-outcome')
       if (flagged) classes.push('box-flagged')
       if (box.node.id === graph.start) classes.push('box-start')
+      // The whole box is one labelled group: a reader using a screen reader
+      // gets the step as a sentence instead of a scattering of text nodes.
+      // The label is untrusted text inside an ATTRIBUTE, which is why
+      // `markupText` escapes both quote styles as well as the angle brackets.
       parts.push(
-        `  <rect class="${classes.join(' ')}" x="${box.x}" y="${box.y}" ` +
+        `  <g class="node" aria-label="${markupText(box.lines.map((line) => line.text).join('; '), 400)}">`,
+      )
+      parts.push(
+        `    <rect class="${classes.join(' ')}" x="${box.x}" y="${box.y}" ` +
         `width="${BOX_WIDTH}" height="${box.height}" rx="6" />`,
       )
       for (const [index, line] of box.lines.entries()) {
         const cls = line.role === 'title' ? 'node-title' : line.role === 'meta' ? 'node-meta' : 'node-flag'
         parts.push(
-          `  <text class="${cls}" x="${box.x + 14}" y="${box.y + BOX_PAD_Y + 11 + index * LINE_HEIGHT}">` +
+          `    <text class="${cls}" x="${box.x + 14}" y="${box.y + BOX_PAD_Y + 11 + index * LINE_HEIGHT}">` +
           `${markupText(line.text)}</text>`,
         )
       }
+      parts.push('  </g>')
     }
   }
 
