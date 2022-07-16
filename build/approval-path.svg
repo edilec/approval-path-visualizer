@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1124 631" width="1124" height="631" role="img" aria-labelledby="apv-title apv-desc">
+  <title id="apv-title">capital purchase approval</title>
+  <desc id="apv-desc">Approval path diagram. 5 approval step(s), 3 outcome(s), 11 edge(s), 5 timeout(s), 2 exception exit(s). Status pass.</desc>
+  <style>
+    text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .canvas { fill: #fbfbfa; }
+    .title { font-size: 15px; fill: #1b1b1a; }
+    .subtitle { font-size: 11px; fill: #55554f; }
+    .alert { font-size: 11px; fill: #8a2f1d; }
+    .band { font-size: 11px; fill: #8a2f1d; }
+    .box { fill: #ffffff; stroke: #9a9a92; stroke-width: 1; }
+    .box-outcome { fill: #f2f7f2; stroke: #4f7a4f; }
+    .box-flagged { fill: #fdf3f1; stroke: #8a2f1d; stroke-dasharray: 5 3; }
+    .box-start { stroke: #1b4f8a; stroke-width: 2; }
+    .node-title { font-size: 12px; fill: #1b1b1a; }
+    .node-meta { font-size: 10px; fill: #55554f; }
+    .node-flag { font-size: 10px; fill: #8a2f1d; }
+    .link-edge { fill: none; stroke: #4a4a45; stroke-width: 1.5; }
+    .link-timeout { fill: none; stroke: #7a5c1b; stroke-width: 1.5; stroke-dasharray: 2 3; }
+    .link-exception { fill: none; stroke: #8a2f1d; stroke-width: 1.5; stroke-dasharray: 7 4; }
+    .link-label { font-size: 10px; fill: #3b3b37; }
+    .link-label-box { fill: #fbfbfa; stroke: #d8d8d2; }
+    .legend { font-size: 10px; fill: #55554f; }
+  </style>
+  <defs>
+    <marker id="apv-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4a4a45" />
+    </marker>
+    <marker id="apv-arrow-timeout" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7a5c1b" />
+    </marker>
+    <marker id="apv-arrow-exception" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8a2f1d" />
+    </marker>
+  </defs>
+  <rect class="canvas" x="0" y="0" width="1124" height="631" />
+  <text class="title" x="28" y="28">capital purchase approval</text>
+  <text class="subtitle" x="28" y="48">5 approval step(s), 3 outcome(s), 11 edge(s), 5 timeout(s), 2 exception exit(s)</text>
+  <text class="subtitle" x="28" y="68">status pass: 0 error(s), 0 warning(s)</text>
+  <g class="links">
+    <path class="link-edge" d="M 562 545 C 658 569, 658 435, 286 459" marker-end="url(#apv-arrow)" />
+    <rect class="link-label-box" x="589" y="491" width="119" height="16" rx="3" />
+    <text class="link-label" x="648" y="502" text-anchor="middle">director approves</text>
+    <path class="link-edge" d="M 562 545 C 934 569, 934 435, 838 459" marker-end="url(#apv-arrow)" />
+    <rect class="link-label-box" x="865" y="491" width="119" height="16" rx="3" />
+    <text class="link-label" x="924" y="502" text-anchor="middle">director declines</text>
+    <path class="link-timeout" d="M 562 545 C 658 569, 658 248, 148 272" marker-end="url(#apv-arrow-timeout)" />
+    <rect class="link-label-box" x="610" y="398" width="77" height="16" rx="3" />
+    <text class="link-label" x="648" y="409" text-anchor="middle">timeout P5D</text>
+    <path class="link-edge" d="M 148 358 L 286 459" marker-end="url(#apv-arrow)" />
+    <rect class="link-label-box" x="109" y="398" width="217" height="16" rx="3" />
+    <text class="link-label" x="217" y="409" text-anchor="middle">duty manager approves on behalf</text>
+    <path class="link-edge" d="M 148 358 L 838 459" marker-end="url(#apv-arrow)" />
+    <rect class="link-label-box" x="420" y="398" width="147" height="16" rx="3" />
+    <text class="link-label" x="493" y="409" text-anchor="middle">duty manager declines</text>
+    <path class="link-timeout" d="M 148 358 L 838 459" marker-end="url(#apv-arrow-timeout)" />
+    <rect class="link-label-box" x="455" y="398" width="77" height="16" rx="3" />
+    <text class="link-label" x="493" y="409" text-anchor="middle">timeout P2D</text>
+    <path class="link-edge" d="M 424 373 L 562 459" marker-end="url(#apv-arrow)" />
+    <rect class="link-label-box" x="441" y="405" width="105" height="16" rx="3" />
+    <text class="link-label" x="493" y="416" text-anchor="middle">amount &gt;= 50000</text>
+    <path class="link-edge" d="M 424 373 L 286 459" marker-end="url(#apv-arrow)" />
+    <rect class="link-label-box" x="268" y="393" width="175" height="28" rx="3" />
+    <text class="link-label" x="355" y="404" text-anchor="middle">amount &lt; 50000 and budget</text>
+    <text class="link-label" x="355" y="416" text-anchor="middle">available</text>
+    <path class="link-edge" d="M 424 373 L 838 459" marker-end="url(#apv-arrow)" />
+    <rect class="link-label-box" x="565" y="405" width="133" height="16" rx="3" />
+    <text class="link-label" x="631" y="416" text-anchor="middle">no budget available</text>
+    <path class="link-timeout" d="M 424 373 C 520 397, 520 248, 148 272" marker-end="url(#apv-arrow-timeout)" />
+    <rect class="link-label-box" x="465" y="312" width="91" height="16" rx="3" />
+    <text class="link-label" x="510" y="323" text-anchor="middle">timeout PT36H</text>
+    <path class="link-exception" d="M 424 373 C 1072 397, 1072 248, 976 272" marker-end="url(#apv-arrow-exception)" />
+    <rect class="link-label-box" x="957" y="312" width="210" height="16" rx="3" />
+    <text class="link-label" x="1062" y="323" text-anchor="middle">requester withdrew the request</text>
+    <path class="link-edge" d="M 562 186 L 424 272" marker-end="url(#apv-arrow)" />
+    <rect class="link-label-box" x="441" y="218" width="105" height="16" rx="3" />
+    <text class="link-label" x="493" y="229" text-anchor="middle">amount &gt;= 10000</text>
+    <path class="link-edge" d="M 562 186 L 700 272" marker-end="url(#apv-arrow)" />
+    <rect class="link-label-box" x="582" y="218" width="98" height="16" rx="3" />
+    <text class="link-label" x="631" y="229" text-anchor="middle">amount &lt; 10000</text>
+    <path class="link-timeout" d="M 562 186 L 148 272" marker-end="url(#apv-arrow-timeout)" />
+    <rect class="link-label-box" x="317" y="218" width="77" height="16" rx="3" />
+    <text class="link-label" x="355" y="229" text-anchor="middle">timeout P2D</text>
+    <path class="link-exception" d="M 562 186 L 976 272" marker-end="url(#apv-arrow-exception)" />
+    <rect class="link-label-box" x="664" y="218" width="210" height="16" rx="3" />
+    <text class="link-label" x="769" y="229" text-anchor="middle">requester withdrew the request</text>
+    <path class="link-edge" d="M 700 358 L 286 459" marker-end="url(#apv-arrow)" />
+    <rect class="link-label-box" x="437" y="398" width="112" height="16" rx="3" />
+    <text class="link-label" x="493" y="409" text-anchor="middle">manager approves</text>
+    <path class="link-edge" d="M 700 358 L 838 459" marker-end="url(#apv-arrow)" />
+    <rect class="link-label-box" x="713" y="398" width="112" height="16" rx="3" />
+    <text class="link-label" x="769" y="409" text-anchor="middle">manager declines</text>
+    <path class="link-timeout" d="M 700 358 C 796 382, 796 248, 148 272" marker-end="url(#apv-arrow-timeout)" />
+    <rect class="link-label-box" x="748" y="304" width="77" height="16" rx="3" />
+    <text class="link-label" x="786" y="315" text-anchor="middle">timeout P3D</text>
+  </g>
+  <g class="node" aria-label="Intake review; approvers: requesting-team-lead; timeout P2D to; escalate-to-operations">
+    <rect class="box box-start" x="442" y="100" width="240" height="86" rx="6" />
+    <text class="node-title" x="456" y="124">Intake review</text>
+    <text class="node-meta" x="456" y="139">approvers: requesting-team-lead</text>
+    <text class="node-meta" x="456" y="154">timeout P2D to</text>
+    <text class="node-meta" x="456" y="169">escalate-to-operations</text>
+  </g>
+  <g class="node" aria-label="Operations escalation; approvers:; operations-duty-manager; timeout P2D to rejected">
+    <rect class="box" x="28" y="272" width="240" height="86" rx="6" />
+    <text class="node-title" x="42" y="296">Operations escalation</text>
+    <text class="node-meta" x="42" y="311">approvers:</text>
+    <text class="node-meta" x="42" y="326">operations-duty-manager</text>
+    <text class="node-meta" x="42" y="341">timeout P2D to rejected</text>
+  </g>
+  <g class="node" aria-label="Finance review; approvers: finance-controller,; budget-owner; timeout PT36H to; escalate-to-operations">
+    <rect class="box" x="304" y="272" width="240" height="101" rx="6" />
+    <text class="node-title" x="318" y="296">Finance review</text>
+    <text class="node-meta" x="318" y="311">approvers: finance-controller,</text>
+    <text class="node-meta" x="318" y="326">budget-owner</text>
+    <text class="node-meta" x="318" y="341">timeout PT36H to</text>
+    <text class="node-meta" x="318" y="356">escalate-to-operations</text>
+  </g>
+  <g class="node" aria-label="Line manager review; approvers: line-manager; timeout P3D to; escalate-to-operations">
+    <rect class="box" x="580" y="272" width="240" height="86" rx="6" />
+    <text class="node-title" x="594" y="296">Line manager review</text>
+    <text class="node-meta" x="594" y="311">approvers: line-manager</text>
+    <text class="node-meta" x="594" y="326">timeout P3D to</text>
+    <text class="node-meta" x="594" y="341">escalate-to-operations</text>
+  </g>
+  <g class="node" aria-label="Withdrawn by requester; outcome: withdrawn">
+    <rect class="box box-outcome" x="856" y="272" width="240" height="56" rx="6" />
+    <text class="node-title" x="870" y="296">Withdrawn by requester</text>
+    <text class="node-meta" x="870" y="311">outcome: withdrawn</text>
+  </g>
+  <g class="node" aria-label="Approved; outcome: approved">
+    <rect class="box box-outcome" x="166" y="459" width="240" height="56" rx="6" />
+    <text class="node-title" x="180" y="483">Approved</text>
+    <text class="node-meta" x="180" y="498">outcome: approved</text>
+  </g>
+  <g class="node" aria-label="Director review; approvers: division-director; timeout P5D to; escalate-to-operations">
+    <rect class="box" x="442" y="459" width="240" height="86" rx="6" />
+    <text class="node-title" x="456" y="483">Director review</text>
+    <text class="node-meta" x="456" y="498">approvers: division-director</text>
+    <text class="node-meta" x="456" y="513">timeout P5D to</text>
+    <text class="node-meta" x="456" y="528">escalate-to-operations</text>
+  </g>
+  <g class="node" aria-label="Rejected; outcome: rejected">
+    <rect class="box box-outcome" x="718" y="459" width="240" height="56" rx="6" />
+    <text class="node-title" x="732" y="483">Rejected</text>
+    <text class="node-meta" x="732" y="498">outcome: rejected</text>
+  </g>
+  <text class="legend" x="28" y="593">solid arrow: conditional edge</text>
+  <text class="legend" x="348" y="593">dotted arrow: timeout</text>
+  <text class="legend" x="28" y="609">dashed arrow: exception exit</text>
+  <text class="legend" x="348" y="609">dashed red box: a finding names this step</text>
+</svg>
