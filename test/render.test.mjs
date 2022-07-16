@@ -11,7 +11,7 @@ function render(value, { format = 'svg', title = 'approval.json' } = {}) {
   const { graph, problems } = compileGraph(value, DEFAULT_LIMITS)
   const analysis = analyseGraph(graph, DEFAULT_LIMITS)
   const findings = [...problems, ...analysis.problems]
-  const errors = findings.filter((item) => item.ruleId.startsWith('node-unreachable')).length
+  const errors = findings.filter((item) => item.ruleId === 'node-unreachable').length
   const report = {
     status: findings.some((item) => item.incomplete) ? 'incomplete' : errors > 0 ? 'fail' : 'pass',
     summary: {

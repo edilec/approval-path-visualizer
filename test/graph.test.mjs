@@ -180,4 +180,17 @@ test('a graph with no name is titled by its file instead', () => {
   const { graph, problems } = compile({ ...structuredClone(GRAPH), name: undefined })
   assert.deepEqual(ruleIds(problems), ['graph-name-missing'])
   assert.equal(graph.name, '')
+
+  const empty = compile({ ...structuredClone(GRAPH), name: '' })
+  assert.deepEqual(ruleIds(empty.problems), ['graph-name-missing'])
+  assert.equal(empty.graph.name, '')
+})
+
+test('a graph name that is not a string stops the compile', () => {
+  for (const name of [7, [], { text: 'x' }, null]) {
+    const { graph, problems } = compile({ ...structuredClone(GRAPH), name })
+    assert.equal(graph, null, String(name))
+    assert.deepEqual(ruleIds(problems), ['graph-invalid'], String(name))
+    assert.equal(problems[0].incomplete, true, String(name))
+  }
 })

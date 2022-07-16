@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdir, readFile, symlink, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, readFile, symlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import test from 'node:test'
 
@@ -149,6 +149,38 @@ test('a dangling symbolic link is reported as unreadable, not followed', async (
     const { report } = await visualizeApprovalPath({ root, graph: 'dangling.json' })
     assert.deepEqual(report.findings.map((item) => item.ruleId), ['graph-unreadable'])
     assert.equal(report.status, 'incomplete')
+  })
+})
+
+test('a destination with no usable path at all is refused', async () => {
+  await workspace(async ({ root, outside }) => {
+    for (const destination of ['', '   ', 7, null]) {
+      await assert.rejects(
+        () => resolveDiagramDestination(root, destination),
+        /Diagram destination must be a non-empty path/,
+        String(destination),
+      )
+    }
+    // The ancestor probe is bounded: a path nested deeper than the probe can
+    // walk is refused by name rather than looping.
+    const deep = join(outside, ...Array.from({ length: 70 }, (_, index) => `d${index}`), 'diagram.svg')
+    await assert.rejects(() => resolveDiagramDestination(root, deep), /nested too deeply to resolve/)
+  })
+})
+
+test('a graph file that cannot be opened is reported, not assumed empty', async () => {
+  await workspace(async ({ root, graphPath }) => {
+    await chmod(graphPath, 0o000)
+    try {
+      await readFile(graphPath)
+      return // running as a user the mode does not restrain; nothing to test
+    } catch {
+      // expected: the file is now unreadable
+    }
+    const { report } = await visualizeApprovalPath({ root, graph: 'approval.json' })
+    assert.deepEqual(report.findings.map((item) => item.ruleId), ['graph-unreadable'])
+    assert.equal(report.status, 'incomplete')
+    await chmod(graphPath, 0o644)
   })
 })
 
