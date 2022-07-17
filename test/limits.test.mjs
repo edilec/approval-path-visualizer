@@ -136,6 +136,35 @@ test('a label, an approver, a condition and a reason are each bounded by maxLabe
   }
 })
 
+test('maxDepth counts the links a path follows, and a path of exactly that length is fine', async () => {
+  // The off-by-one matters: a graph whose longest path is exactly the bound
+  // has been walked in full, and calling that run incomplete would withhold a
+  // verdict the traversal did obtain. One link further is genuinely unwalked.
+  const chain = (steps) => ({
+    schemaVersion: '1',
+    name: 'chain',
+    start: 's0',
+    nodes: [
+      ...Array.from({ length: steps }, (unused, index) => step({
+        id: `s${index}`,
+        label: `Step ${index}`,
+        timeout: undefined,
+        edges: [{ to: index === steps - 1 ? 'approved' : `s${index + 1}`, condition: 'onwards' }],
+      })),
+      { id: 'approved', kind: 'outcome', label: 'Approved', outcome: 'approved' },
+    ],
+  })
+
+  const exact = await runWith(chain(3), { maxDepth: 3 })
+  assert.equal(exact.report.status, 'pass', 'a path of exactly maxDepth was called too deep')
+  assert.equal(exact.analysis.decided, true)
+
+  const over = await runWith(chain(3), { maxDepth: 2 })
+  assert.equal(over.report.status, 'incomplete')
+  assert.ok(over.report.findings.some((item) => item.ruleId === 'path-too-deep'))
+  assert.equal(over.analysis.decided, false)
+})
+
 test('the limits a caller may set are exactly the documented ones', () => {
   assert.deepEqual(Object.keys(validateLimits({})), Object.keys(DEFAULT_LIMITS))
   assert.throws(() => validateLimits({ maxNode: 5 }), /Unknown limit "maxNode"/)

@@ -184,6 +184,9 @@ This tool reads a description of an approval path. Here is what that cannot tell
 - **Whether a reachable path is one a real request can take.** Reachability here is graph
   reachability and ignores conditions entirely, so a step reachable only when `amount < 0` counts as
   reachable.
+- **How many loops a tangle contains.** Cycle detection reports at least one cycle through every
+  cyclic region and marks every step on a reported one, but it does not enumerate every elementary
+  cycle: a region with several overlapping loops may be described by fewer.
 - **Whether an unreachable step is dead.** It is unreachable *from the declared start*. A process
   entered at several points is not the shape this tool reads.
 - **Anything at all about a run whose status is `incomplete`.** That status means the tool did not

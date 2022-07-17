@@ -523,6 +523,13 @@ export function canonicalCycle(cycle) {
  * be the graph's documented one, not the interpreter's stack: a 500-node chain
  * has to be answered by a limit the report can name, not by an overflow no
  * report could describe.
+ *
+ * This is back-edge detection, not an enumeration of every elementary cycle.
+ * Every cyclic region produces at least one reported cycle, and every node in
+ * a reported cycle is marked -- but a region with many overlapping loops can
+ * be described by fewer cycles than it strictly contains. Reporting one loop
+ * per region is what a reader needs to act; claiming to have listed them all
+ * would be claiming more than this walk knows.
  */
 export function findCycles(graph, budget) {
   const cycles = new Map()
@@ -590,13 +597,17 @@ export function layerFromStart(graph, limits, budget) {
     const id = queue[head]
     head += 1
     const depth = layers.get(id)
-    if (depth >= limits.maxDepth) {
-      tooDeep = true
-      continue
-    }
     for (const link of outgoingLinks(graph.byId.get(id))) {
       if (!spend(budget)) return { layers, complete: false, tooDeep }
       if (!graph.byId.has(link.to) || layers.has(link.to)) continue
+      // The bound is only reached when there is something left to reach: a
+      // step at exactly maxDepth whose every target is already laid out has
+      // been fully explored, and calling that run incomplete would withhold a
+      // verdict the walk did in fact obtain.
+      if (depth >= limits.maxDepth) {
+        tooDeep = true
+        continue
+      }
       layers.set(link.to, depth + 1)
       queue.push(link.to)
     }

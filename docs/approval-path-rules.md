@@ -113,6 +113,15 @@ that decides them ran to completion. If the start step is unknown, or `maxDepth`
 A step the walk never visited is not evidence that no path reaches it. Reporting it as one would be
 a fabricated finding — the same defect as a pass on no evidence, pointing the other way.
 
+`maxDepth` counts the links a path follows, and a path of exactly that length is walked in full: the
+bound is only reached when there is still something unvisited beyond it.
+
+Cycle detection is back-edge detection, not an enumeration of every elementary cycle. Every cyclic
+region produces at least one reported cycle, and every node in a reported cycle is marked, but a
+region with several overlapping loops can be described by fewer cycles than it strictly contains.
+One loop per region is what a reader needs in order to act; claiming to have listed them all would
+be claiming more than the walk knows.
+
 ## Limits
 
 | Limit | Default | Flag | Exceeding it |
