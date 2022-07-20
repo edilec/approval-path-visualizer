@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
-import { chmod, mkdir, readFile, symlink, writeFile } from 'node:fs/promises'
+import { chmod, link, mkdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import test from 'node:test'
 
-import { isInside, resolveDiagramDestination, visualizeApprovalPath } from '../src/index.mjs'
+import { isInside, isSameFile, resolveDiagramDestination, visualizeApprovalPath } from '../src/index.mjs'
 import { GRAPH, args, cli, workspace } from './support.mjs'
 
 /**
@@ -118,6 +118,49 @@ test('a destination outside the root is written, and the graph file is not touch
     const diagram = await readFile(out, 'utf8')
     assert.ok(diagram.startsWith('<svg xmlns='))
     assert.match(result.stderr, /diagram written:/)
+  })
+})
+
+test('isSameFile decides by device and inode, which is the only thing a hard link shares', async () => {
+  await workspace(async ({ outside, graphPath }) => {
+    const second = join(outside, 'second-name.json')
+    await link(graphPath, second)
+    const separate = join(outside, 'separate.json')
+    await writeFile(separate, await readFile(graphPath))
+
+    // The two names resolve to two different real paths -- a hard link has no
+    // target for realpath to follow -- and are nonetheless one file.
+    assert.notEqual(await realpath(second), await realpath(graphPath))
+    assert.equal(await isSameFile(second, graphPath), true)
+
+    // Byte-identical content is not identity, and an absent path is not a match.
+    assert.equal(await isSameFile(separate, graphPath), false)
+    assert.equal(await isSameFile(join(outside, 'never-existed'), graphPath), false)
+    assert.equal(await isSameFile(graphPath, join(outside, 'never-existed')), false)
+  })
+})
+
+test('a destination that is the graph file under another name is refused, and the graph survives', async () => {
+  // The data-loss case containment cannot see: a hard link to the input, made
+  // anywhere outside the root, is its own real path, so every path comparison
+  // says "different file" while writeFile to it truncates the graph.
+  await workspace(async ({ root, outside, graphPath }) => {
+    const before = await readFile(graphPath)
+    const decoy = join(outside, 'diagram.svg')
+    await link(graphPath, decoy)
+
+    await assert.rejects(
+      () => resolveDiagramDestination(root, decoy, graphPath),
+      /the graph file itself under another name/,
+    )
+
+    const result = await cli(args(root, ['--out', decoy]))
+    assert.equal(result.code, 2)
+    assert.equal(result.stdout, '')
+    assert.match(result.stderr, /--out is not usable/)
+    assert.deepEqual(await readFile(graphPath), before)
+    // And the link, which is the same file, is still the graph too.
+    assert.deepEqual(await readFile(decoy), before)
   })
 })
 

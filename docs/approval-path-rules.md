@@ -172,6 +172,21 @@ Node builds, and they treat punctuation as ignorable, so `step-a` and `step_a` s
 on where the tool ran. Running the tool twice over the same bytes produces byte-identical stdout and
 a byte-identical diagram.
 
+## The diagram destination
+
+The diagram is derived from the graph, and writing it back into the tree the graph lives in is how a
+read-only tool modifies its own input on the next run. `--out` is refused when:
+
+- it resolves inside `--root`, including through a symbolically linked parent directory; or
+- it is a directory; or
+- it names the graph file itself under a second name.
+
+That last one is not the same check as the first. `realpath` resolves a symbolic link, but a hard
+link has no target: `cp -l`, a package store and a backup snapshot all produce two names for one
+inode, and those two names resolve to two different real paths. A path comparison says "different
+file" and the write truncates the graph. File identity is the `(device, inode)` pair, so that is
+what is compared, before any byte is written.
+
 ## Output
 
 stdout carries the report and nothing else; diagnostics go to stderr.

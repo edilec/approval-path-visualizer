@@ -7,6 +7,7 @@ import {
   excerpt,
   formatReport,
   resolveDiagramDestination,
+  resolveGraphPath,
   visualizeApprovalPath,
   writeDiagram,
 } from '../src/index.mjs'
@@ -149,10 +150,22 @@ async function main(argv) {
     return 2
   }
 
+  // Which file the graph will be read from, so the destination check below can
+  // refuse a hard link pointing at it: two names for one inode resolve to two
+  // different paths, and writing the diagram to the second truncates the first.
+  // A graph path that cannot be resolved at all is left alone here -- the run
+  // itself reports it, in the ordinary way, on stdout.
+  let graphReal = null
+  try {
+    graphReal = await resolveGraphPath(rootReal, options.graph)
+  } catch {
+    graphReal = null
+  }
+
   let destination = null
   if (options.out !== null) {
     try {
-      destination = await resolveDiagramDestination(rootReal, options.out)
+      destination = await resolveDiagramDestination(rootReal, options.out, graphReal)
     } catch (error) {
       process.stderr.write(`--out is not usable: ${excerpt(error.message, 200)}\n`)
       return 2

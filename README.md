@@ -71,7 +71,9 @@ const { report, diagram, graph, analysis } = await visualizeApprovalPath({
 
 `visualizeApprovalPath` reads; it never writes. `diagram` is a string, and where it goes is the
 caller's decision — `writeDiagram` is offered for convenience and refuses nothing on its own, which
-is why the CLI resolves the destination with `resolveDiagramDestination` first.
+is why the CLI resolves the destination with `resolveDiagramDestination(root, out, graphPath)`
+first. Pass that third argument: it is what refuses a destination that is the graph file reached by
+another name.
 
 The pure pieces are exported too: `compileGraph`, `analyseGraph`, `renderDiagram`, `layoutGraph`,
 `findCycles`, `layerFromStart`, `canonicalCycle`, `escapeMarkup`, `markupText`, `parseDuration`.
@@ -148,8 +150,10 @@ deleting that line, watching the suite go red, and putting it back.
   node identifier and an outcome value among them — in both formats, asserted against the document's
   element and attribute vocabulary rather than against what an escape function returns.
 - **The input is never written to.** The graph file is byte-identical, to the millisecond, after any
-  run; the diagram destination is refused if it resolves inside the input root, and refused through
-  a symlinked parent too.
+  run; the diagram destination is refused if it resolves inside the input root, refused through a
+  symlinked parent, and refused when it is the graph file itself under a second name. `realpath`
+  resolves a symbolic link, but a hard link has no target — two names for one inode resolve to two
+  different paths, so identity is decided on `(device, inode)` and never on the resolved path.
 - **A verdict is withheld rather than guessed.** `node-unreachable`, `approval-cycle` and
   `outcome-unreachable` are reported only when the traversal that decides them ran to completion. A
   bounded-out or untraceable walk is `incomplete`, which is not a pass and not a failure.

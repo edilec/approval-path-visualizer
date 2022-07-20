@@ -9,8 +9,10 @@
  *
  * 1. **The input is opened read-only.** The diagram is a derived artifact
  *    written to a destination that is refused if it resolves inside the input
- *    root, so a run can never overwrite the graph it was asked to draw, and
- *    there is no auto-fix of any kind.
+ *    root -- or if it is the graph file itself under a second name, which a
+ *    hard link is and no path comparison can see -- so a run can never
+ *    overwrite the graph it was asked to draw, and there is no auto-fix of any
+ *    kind.
  * 2. **Every untrusted string is sanitised and escaped before it enters the
  *    output.** Labels, approver names, conditions, reasons and ids all come
  *    from a file this tool did not write and all end up inside markup. A label
@@ -177,13 +179,48 @@ export async function resolveGraphPath(rootReal, relativePath) {
 }
 
 /**
+ * Two names for one file.
+ *
+ * `realpath` resolves symbolic links, but a hard link has no target to resolve:
+ * two names for one inode are two different real paths, so a path comparison
+ * says they are different files while a write to either one destroys the other.
+ * File identity is the `(device, inode)` pair, and nothing else is. Hard links
+ * are ordinary in build trees -- `cp -l`, package stores, backup snapshots --
+ * so this is not an exotic case to be waved away.
+ */
+export async function isSameFile(left, right) {
+  let first
+  let second
+  try {
+    first = await stat(left)
+  } catch (error) {
+    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return false
+    throw new TypeError(`Path could not be inspected: ${error.code ?? 'unknown error'}`)
+  }
+  try {
+    second = await stat(right)
+  } catch (error) {
+    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return false
+    throw new TypeError(`Path could not be inspected: ${error.code ?? 'unknown error'}`)
+  }
+  return first.dev === second.dev && first.ino === second.ino
+}
+
+/**
  * Resolve the diagram destination and refuse anything inside the input root.
  *
  * The diagram is derived from the graph; writing it back into the tree the
  * graph lives in is how a "read-only" tool ends up modifying its own input on
  * the next run.
+ *
+ * Containment is not the whole of it. A hard link to the graph file, sitting
+ * anywhere outside the root, resolves to its own path and passes every
+ * containment check ever written -- and `writeFile` to it truncates the graph
+ * this run was asked to read. So when the caller knows which file the graph
+ * was read from, the destination is compared with it by device and inode as
+ * well, and a match is refused before a single byte is written.
  */
-export async function resolveDiagramDestination(rootReal, destination) {
+export async function resolveDiagramDestination(rootReal, destination, graphReal = null) {
   if (typeof destination !== 'string' || destination.trim() === '') {
     throw new TypeError('Diagram destination must be a non-empty path')
   }
@@ -191,6 +228,11 @@ export async function resolveDiagramDestination(rootReal, destination) {
   if (isInside(rootReal, resolved)) {
     throw new TypeError(
       'Diagram destination is inside the input root; the diagram is a derived artifact and must be written elsewhere',
+    )
+  }
+  if (graphReal !== null && await isSameFile(resolved, graphReal)) {
+    throw new TypeError(
+      'Diagram destination is the graph file itself under another name (a hard link); writing it would destroy the input',
     )
   }
   try {
