@@ -68,6 +68,8 @@ const INCOMPLETE_INPUTS = Object.freeze([
   ['a node that could not be read', JSON.stringify(graphWith([{ id: 'broken', kind: 'gateway' }])), 'approval.json'],
   ['no start step', JSON.stringify({ ...GRAPH, start: undefined }), 'approval.json'],
   ['a start nothing declares', JSON.stringify({ ...GRAPH, start: 'nowhere' }), 'approval.json'],
+  ['a start that is not an id at all', JSON.stringify({ ...GRAPH, start: 123 }), 'approval.json'],
+  ['a start id no node could carry', JSON.stringify({ ...GRAPH, start: ' padded ' }), 'approval.json'],
 ])
 
 test('every input the tool could not fully read comes back incomplete, and exits 2', async () => {

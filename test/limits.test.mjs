@@ -98,6 +98,49 @@ test('every documented limit is enforced, named, and makes the run incomplete', 
   }
 })
 
+test('nothing past a limit is read: the counts stop where the finding says they do', async () => {
+  // Every one of these findings says "the remainder were not read". What makes
+  // that sentence true is the slice that stops the read, and these are the
+  // assertions that fail when one of them goes: the count moves while the
+  // finding goes on claiming the same thing.
+
+  const nodes = await runWith(graphWith([step({ id: 'extra' })]), { maxNodes: 2 })
+  assert.equal(nodes.report.summary.checked, 2, 'a node past maxNodes was read')
+  assert.ok(nodes.report.findings.some((item) => item.ruleId === 'too-many-nodes'))
+  // And the step that was not read is not in the picture either.
+  assert.equal(nodes.diagram.includes('extra'), false, 'a node past maxNodes was drawn')
+
+  const approvers = await runWith(
+    graphWith([step({ id: 'wide', approvers: ['one', 'two', 'three'] })]),
+    { maxApprovers: 1 },
+  )
+  assert.equal(approvers.report.summary.approvers, 2, 'an approver past maxApprovers was read')
+  assert.equal(
+    approvers.report.findings.find((item) => item.ruleId === 'node-unreachable').message,
+    'No path from the start step "intake" reaches this node. Its approvers (one) are never asked.',
+  )
+
+  const edges = await runWith(graphWith([step({
+    id: 'branch',
+    edges: [
+      { to: 'approved', condition: 'a' },
+      { to: 'intake', condition: 'b' },
+      { to: 'branch', condition: 'c' },
+    ],
+  })]), { maxEdgesPerNode: 1 })
+  assert.equal(edges.report.summary.edges, 2, 'an edge past maxEdgesPerNode was read')
+
+  const exits = await runWith(graphWith([step({
+    id: 'exits',
+    exceptions: [
+      { to: 'approved', reason: 'first' },
+      { to: 'approved', reason: 'second' },
+      { to: 'approved', reason: 'third' },
+    ],
+  })]), { maxEdgesPerNode: 1 })
+  assert.equal(exits.report.summary.exceptionExits, 1, 'an exception exit past maxEdgesPerNode was read')
+})
+
 test('the same graphs pass with the limits at their documented defaults', async () => {
   // Without this, every case above would also pass if the tool simply refused
   // everything: the limits have to be the thing that changed the answer.
@@ -110,6 +153,26 @@ test('the same graphs pass with the limits at their documented defaults', async 
       `${item.name}: reported at the default limit`,
     )
   }
+})
+
+test('an exception-exit list past maxEdgesPerNode withholds the verdict too, not only an edge list', async () => {
+  // One rule, raised from two places. The edge list is the one the cases above
+  // exercise; the exception list is the other, and where its unread exits lead
+  // is just as unknown -- so it withholds the verdict in the same way.
+  const { report, viaCli } = await runWith(
+    graphWith([step({
+      id: 'exits',
+      exceptions: [{ to: 'approved', reason: 'first' }, { to: 'approved', reason: 'second' }],
+    })]),
+    { maxEdgesPerNode: 1 },
+    ['--max-edges-per-node', '1'],
+  )
+  const finding = report.findings.find((item) => item.ruleId === 'too-many-edges')
+  assert.notEqual(finding, undefined, 'too-many-edges was not reported for an exception list')
+  assert.equal(finding.location.pointer, '/nodes/exits/exceptions')
+  assert.equal(report.status, 'incomplete')
+  assert.equal(viaCli.code, 2)
+  assert.equal(JSON.parse(viaCli.stdout).status, 'incomplete')
 })
 
 test('a label, an approver, a condition and a reason are each bounded by maxLabelLength', async () => {
