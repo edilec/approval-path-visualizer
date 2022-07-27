@@ -138,6 +138,39 @@ test('a label carrying a control character is reported, not silently cleaned', a
   assert.equal(report.summary.warnings, 1)
 })
 
+test('a finding assembled from an unbounded list is still bounded', async () => {
+  // `approval-cycle` writes its message and its evidence out of a list of node
+  // ids, and nothing bounds that list but maxNodes -- at the default of 500 a
+  // single finding would carry tens of kilobytes of attacker-chosen text into
+  // every consumer of this report. The bound is in createFinding, applied a
+  // second time to values that were already excerpted, and this is what says
+  // so: 400 characters plus the ellipsis for a message, 160 plus it for
+  // evidence, whatever the graph does.
+  const ids = Array.from({ length: 60 }, (unused, index) => `s${String(index).padStart(2, '0')}`.padEnd(100, 'x'))
+  const nodes = ids.map((id, index) => step({
+    id,
+    label: 'Step',
+    timeout: { after: 'P1D', to: ids[(index + 1) % ids.length] },
+    edges: [{ to: ids[(index + 1) % ids.length], condition: 'onwards' }],
+  }))
+  nodes[0].edges.push({ to: 'approved', condition: 'done' })
+  nodes.push({ id: 'approved', kind: 'outcome', label: 'Approved', outcome: 'approved' })
+
+  const { report } = await workspace(
+    async ({ root }) => visualizeApprovalPath({ root, graph: 'approval.json' }),
+    { graph: { schemaVersion: '1', name: 'long cycle', start: ids[0], nodes } },
+  )
+  const finding = report.findings.find((item) => item.ruleId === 'approval-cycle')
+  assert.notEqual(finding, undefined, 'the 60-step cycle was not reported')
+  assert.equal(finding.message.length, 403)
+  assert.equal(finding.message.endsWith('...'), true)
+  assert.equal(finding.evidence.length, 163)
+  assert.equal(finding.evidence.endsWith('...'), true)
+  for (const item of report.findings) {
+    assert.ok(item.message.length <= 403, `${item.ruleId}: message of ${item.message.length} characters`)
+  }
+})
+
 test('the CLI keeps every class out of stdout and stderr', async () => {
   for (const [className, code] of CLASSES) {
     const character = String.fromCharCode(code)
