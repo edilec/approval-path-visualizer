@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
+import { join } from 'node:path'
 import test from 'node:test'
 
 import { DEFAULT_LIMITS, validateLimits, visualizeApprovalPath } from '../src/index.mjs'
-import { GRAPH, args, cli, graphWith, step, workspace } from './support.mjs'
+import { GRAPH, args, cli, graphWith, projectDirectory, step, workspace } from './support.mjs'
 
 /**
  * Every documented limit, enforced and tested.
@@ -196,6 +197,72 @@ test('a label, an approver, a condition and a reason are each bounded by maxLabe
     // Cut visibly rather than quietly: whatever the diagram shows of an
     // over-long value, it shows that something was cut.
     if (pointer !== '/nodes/wordy/label') assert.ok(diagram.includes('...'), pointer)
+  }
+})
+
+test('maxLabelLength bounds what is drawn and decides nothing', async () => {
+  // A display bound that reaches a judgement fabricates findings. Cut to five
+  // characters, every outcome in the clean example fell outside the vocabulary
+  // ("Outcome \"appro...\" is outside the vocabulary approved, rejected,
+  // withdrawn") and five pairs of plainly different conditions were reported as
+  // making the path ambiguous. What the bound may say is that a value is too
+  // long; what it may not do is change what the value means.
+  const cut = await cli([
+    '--root', join(projectDirectory, 'examples/clean'), '--graph', 'approval.json',
+    '--json', '--max-label-length', '5',
+  ])
+  assert.deepEqual(
+    [...new Set(JSON.parse(cut.stdout).findings.map((item) => item.ruleId))],
+    ['label-too-long'],
+  )
+
+  // Two conditions sharing their first 120 characters, at the documented
+  // default of 120. They are two conditions, whatever a diagram has room for.
+  const shared = 'amount is above the approval threshold for this cost centre'.padEnd(120, '-')
+  const twoTargets = graphWith([step({ id: 'second' })])
+  twoTargets.nodes[0].edges = [
+    { to: 'approved', condition: `${shared}route A` },
+    { to: 'second', condition: `${shared}route B` },
+  ]
+  const branching = await runWith(twoTargets, {})
+  assert.equal(
+    branching.report.findings.some((item) => item.ruleId === 'condition-duplicate'),
+    false,
+    'two conditions that differ past the bound were called one',
+  )
+
+  // The same pair on two edges to one target, which is where the other
+  // comparison lives: the same destination under two different conditions is
+  // not the same edge declared twice.
+  const oneTarget = graphWith([])
+  oneTarget.nodes[0].edges = [
+    { to: 'approved', condition: `${shared}route A` },
+    { to: 'approved', condition: `${shared}route B` },
+  ]
+  const repeated = await runWith(oneTarget, {})
+  assert.equal(
+    repeated.report.findings.some((item) => item.ruleId === 'edge-duplicate'),
+    false,
+    'two edges that differ past the bound were called one',
+  )
+
+  // And two approvers whose names differ past the bound are two people: the
+  // second is not dropped from the step as a repeat of the first.
+  const wide = await runWith(
+    graphWith([step({ id: 'wide', approvers: [`${shared}Ann`, `${shared}Bo`] })]),
+    {},
+  )
+  assert.equal(
+    wide.report.findings.some((item) => item.ruleId === 'approvers-duplicate'),
+    false,
+    'two approvers that differ past the bound were called one',
+  )
+  assert.equal(wide.graph.byId.get('wide').approvers.length, 2, 'an approver was dropped as a repeat')
+
+  // The bound still reports every one of those values as too long, and the
+  // shorter ones the same graphs carry are not reported at all.
+  for (const result of [branching, repeated, wide]) {
+    assert.equal(result.report.findings.filter((item) => item.ruleId === 'label-too-long').length, 2)
   }
 })
 

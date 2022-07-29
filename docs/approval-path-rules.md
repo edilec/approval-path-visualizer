@@ -142,6 +142,13 @@ runaway and decides the same way every time.
 No limit is exceeded silently. Every one of them is a finding naming the limit, and every one of
 them makes the run `incomplete` rather than producing a quietly shorter answer.
 
+`maxLabelLength` bounds what is **drawn** and decides nothing else. The vocabulary check on an
+`outcome`, and the comparisons that decide whether two conditions, two edges or two approvers are
+the same, all run on the whole sanitised value. A display bound that reaches a judgement invents
+findings: cut to five characters, a clean graph reported every outcome as outside the vocabulary and
+every pair of conditions sharing an opening as making the path ambiguous — both false, and both
+about a graph the reader can see is fine.
+
 ## Escaping and sanitising
 
 Every label, approver name, condition, exception reason, outcome, graph name and node id arrives in

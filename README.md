@@ -160,7 +160,12 @@ deleting that line, watching the suite go red, and putting it back.
 - **`pass` with `checked: 0` is not reachable.** A graph that yielded no step is `incomplete`.
 - **Every documented limit is enforced**, reported by name, and makes the run `incomplete` — never a
   quietly shorter diagram. Nothing is truncated in silence: a value above `maxLabelLength` is cut
-  with an ellipsis *and* a finding, and the renderer wraps rather than cuts.
+  with an ellipsis *and* a finding, and the renderer wraps rather than cuts. Nothing past a limit is
+  read, either: the counts in the summary stop where the finding says the reading stopped.
+- **A display bound decides nothing.** `maxLabelLength` bounds what the diagram draws; the outcome
+  vocabulary check and the comparisons behind `condition-duplicate`, `edge-duplicate` and
+  `approvers-duplicate` all run on the whole sanitised value, so lowering the bound cannot invent a
+  finding about a graph that is fine.
 - **Every finding's severity comes from one frozen table**, asserted against the documented catalog
   in both directions — and, because three agreeing declarations can be edited together, every rule
   that can decide a verdict is pinned again by behaviour: a real graph through the real binary,

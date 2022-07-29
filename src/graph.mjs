@@ -82,6 +82,27 @@ function displayText(problems, pointer, site, value, limits) {
   return excerpt(value, limits.maxLabelLength)
 }
 
+/**
+ * The value a judgement compares, as distinct from the value a diagram shows.
+ *
+ * `displayText` bounds what is drawn, and that bound is a display decision.
+ * Two conditions that first differ in their 130th character are two different
+ * conditions whatever `maxLabelLength` happens to be, and an outcome spelling
+ * `approved` is inside the vocabulary even when the diagram has room for five
+ * characters of it. Cutting first and judging afterwards makes the verdict a
+ * function of a drawing option, which produced findings that were simply
+ * false: a clean graph "failed" at `--max-label-length 5` with its outcomes
+ * outside the vocabulary and its conditions duplicated.
+ *
+ * The sanitising pass still runs -- a value that prints differently from the
+ * value that was compared is one nobody can audit -- and nothing is cut. This
+ * value is compared and never emitted; what a finding quotes is still the
+ * bounded display text.
+ */
+function comparableText(value) {
+  return excerpt(value, Number.MAX_SAFE_INTEGER)
+}
+
 function unknownKeys(problems, ruleId, value, allowed, pointerPrefix, what) {
   for (const key of Object.keys(value).sort(byCodeUnit)) {
     if (allowed.includes(key)) continue
@@ -195,7 +216,8 @@ function compileNode(problems, raw, index, limits) {
         return drop('Every approver must be a non-empty string.', `approvers/${position}`)
       }
       const name = displayText(problems, `${pointer}/approvers/${position}`, 'approver', entry, limits)
-      if (seen.has(name)) {
+      const key = comparableText(entry)
+      if (seen.has(key)) {
         add(problems, {
           ruleId: 'approvers-duplicate',
           pointer: `${pointer}/approvers/${position}`,
@@ -204,7 +226,7 @@ function compileNode(problems, raw, index, limits) {
         })
         continue
       }
-      seen.add(name)
+      seen.add(key)
       approvers.push(name)
     }
   }
@@ -235,12 +257,17 @@ function compileNode(problems, raw, index, limits) {
       unknownKeys(problems, 'node-key-unknown', entry, EDGE_KEYS, `${pointer}/${edgeAt}`, 'Edge')
       if (!isIdentifier(entry.to)) return drop('Every edge must name a valid target node id in "to".', `${edgeAt}/to`)
       let condition = null
+      let conditionKey = null
       if (entry.condition !== undefined) {
         if (typeof entry.condition !== 'string') return drop('An edge condition must be a string.', `${edgeAt}/condition`)
         condition = displayText(problems, `${pointer}/${edgeAt}/condition`, 'condition', entry.condition, limits)
-        if (condition === '') condition = null
+        conditionKey = comparableText(entry.condition)
+        if (conditionKey === '') {
+          condition = null
+          conditionKey = null
+        }
       }
-      edges.push({ to: entry.to, condition })
+      edges.push({ to: entry.to, condition, conditionKey })
     }
   }
 
@@ -308,7 +335,7 @@ function compileNode(problems, raw, index, limits) {
     }
     if (typeof raw.outcome !== 'string') return drop('An outcome must be a string.', 'outcome')
     outcome = displayText(problems, `${pointer}/outcome`, 'outcome', raw.outcome, limits)
-    if (!OUTCOME_VALUES.includes(outcome)) {
+    if (!OUTCOME_VALUES.includes(comparableText(raw.outcome))) {
       add(problems, {
         ruleId: 'outcome-value-unknown',
         pointer: `${pointer}/outcome`,
@@ -702,7 +729,7 @@ export function analyseGraph(graph, limits) {
           suggestion: 'State the condition, or make this the only unconditional edge by removing the others.',
         })
       }
-      const targetKey = JSON.stringify([edge.to, edge.condition])
+      const targetKey = JSON.stringify([edge.to, edge.conditionKey])
       if (targets.has(targetKey)) {
         structural(node, pointer, {
           ruleId: 'edge-duplicate',
@@ -712,8 +739,8 @@ export function analyseGraph(graph, limits) {
         continue
       }
       targets.add(targetKey)
-      if (edge.condition === null) continue
-      if (conditions.has(edge.condition)) {
+      if (edge.conditionKey === null) continue
+      if (conditions.has(edge.conditionKey)) {
         structural(node, pointer, {
           ruleId: 'condition-duplicate',
           message: `Condition "${edge.condition}" is declared on two edges leaving this step that lead to different nodes, so the path a request takes is ambiguous.`,
@@ -722,7 +749,7 @@ export function analyseGraph(graph, limits) {
         })
         continue
       }
-      conditions.set(edge.condition, position)
+      conditions.set(edge.conditionKey, position)
     }
   }
 
