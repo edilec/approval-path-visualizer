@@ -8,6 +8,7 @@ import {
   excerpt,
   hasControlCharacters,
   isIdentifier,
+  isPlainObject,
   markupText,
   parseDuration,
   wrapText,
@@ -67,6 +68,37 @@ test('markupText sanitises before it escapes', () => {
   assert.equal(rendered.includes('\u202e'), false)
   assert.equal(rendered.includes('<'), false)
   assert.equal(rendered, '&lt;script&gt; alert(1)&lt;/script&gt;')
+})
+
+test('isPlainObject refuses a class instance dressed up as one', () => {
+  // JSON.parse cannot produce any of these, so the graph file is not how they
+  // arrive -- the exported library API is, and `compileGraph`, `compileNode`
+  // and the options check all read structure off whatever they are handed. An
+  // object whose prototype is not Object.prototype can carry an `id` getter, a
+  // `nodes` accessor or a `then`, and treating it as data read from a file is
+  // how a value nobody wrote gets a vote.
+  class Step {
+    constructor() {
+      this.id = 'intake'
+      this.kind = 'approval'
+    }
+  }
+
+  assert.equal(isPlainObject({}), true)
+  assert.equal(isPlainObject({ id: 'x' }), true)
+  assert.equal(isPlainObject(Object.create(null)), true)
+
+  assert.equal(isPlainObject(new Step()), false)
+  assert.equal(isPlainObject(new Map()), false)
+  assert.equal(isPlainObject(new Date(0)), false)
+  assert.equal(isPlainObject(new String('graph')), false)
+  assert.equal(isPlainObject(Object.create({ id: 'inherited' })), false)
+  assert.equal(isPlainObject([]), false)
+  assert.equal(isPlainObject(null), false)
+  assert.equal(isPlainObject('graph'), false)
+  assert.equal(isPlainObject(7), false)
+  assert.equal(isPlainObject(undefined), false)
+  assert.equal(isPlainObject(() => 'graph'), false)
 })
 
 test('parseDuration reads days, hours and minutes, and refuses the ambiguous ones', () => {

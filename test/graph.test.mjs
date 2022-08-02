@@ -29,7 +29,18 @@ test('the clean fixture compiles with no problem at all', () => {
 })
 
 test('a graph that is not an object, or declares no nodes, compiles to nothing', () => {
-  for (const value of [null, [], 'graph', 7]) {
+  class Graph {
+    constructor() {
+      this.schemaVersion = '1'
+      this.start = 'intake'
+      this.nodes = []
+    }
+  }
+
+  // The class instance is the one a JSON file cannot deliver and the library
+  // API can: it answers every structural question a plain object would, and it
+  // is still not a value read from a file.
+  for (const value of [null, [], 'graph', 7, new Map(), new Graph()]) {
     const { graph, problems } = compile(value)
     assert.equal(graph, null)
     assert.deepEqual(ruleIds(problems), ['graph-invalid'])
