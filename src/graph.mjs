@@ -103,8 +103,18 @@ function comparableText(value) {
   return excerpt(value, Number.MAX_SAFE_INTEGER)
 }
 
+/**
+ * Report every key outside the documented vocabulary.
+ *
+ * These rows are re-sorted by `(file, pointer, ruleId, message)` on their way
+ * into the report, so a comparator here decides nothing about what is emitted.
+ * There was one, and it read as a determinism guard while a full reversal of
+ * it left every test in the suite green -- which is worse than no guard,
+ * because a reader believes it. The order this tool emits is pinned where it
+ * is decided, in `test/ordering.test.mjs`.
+ */
 function unknownKeys(problems, ruleId, value, allowed, pointerPrefix, what) {
-  for (const key of Object.keys(value).sort(byCodeUnit)) {
+  for (const key of Object.keys(value)) {
     if (allowed.includes(key)) continue
     add(problems, {
       ruleId,

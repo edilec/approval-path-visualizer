@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { DEFAULT_LIMITS, analyseGraph, compileGraph, renderDiagram, visualizeApprovalPath } from '../src/index.mjs'
+import { DEFAULT_LIMITS, analyseGraph, compileGraph, layoutGraph, renderDiagram, visualizeApprovalPath } from '../src/index.mjs'
 import { GRAPH, elementNames, graphWith, step, tagsBalance, workspace } from './support.mjs'
 
 const SVG_ELEMENTS = ['defs', 'desc', 'g', 'marker', 'path', 'rect', 'style', 'svg', 'text', 'title']
@@ -64,6 +64,41 @@ test('every step, approver, condition, timeout and exception exit is drawn', () 
   assert.ok(diagram.includes('>requester withdrew<'))
   assert.equal((diagram.match(/class="link-timeout"/g) ?? []).length, 1)
   assert.equal((diagram.match(/class="link-exception"/g) ?? []).length, 1)
+})
+
+test('the layers are drawn in the order a request travels them, top to bottom', () => {
+  // The one thing the layout claims: layer 0 at the top and each next layer
+  // below it. The comparator that decides this could be reversed with the whole
+  // suite green, and a diagram read upside down misstates the path it draws.
+  const chain = {
+    schemaVersion: '1',
+    name: 'chain',
+    start: 'first',
+    nodes: [
+      step({ id: 'first', label: 'First', edges: [{ to: 'second', condition: 'onwards' }], timeout: undefined }),
+      step({ id: 'second', label: 'Second', edges: [{ to: 'third', condition: 'onwards' }], timeout: undefined }),
+      step({ id: 'third', label: 'Third', edges: [{ to: 'approved', condition: 'onwards' }], timeout: undefined }),
+      { id: 'approved', kind: 'outcome', label: 'Approved', outcome: 'approved' },
+      step({ id: 'stranded', label: 'Stranded', timeout: undefined }),
+    ],
+  }
+  const { graph, analysis, diagram } = render(chain)
+  const layout = layoutGraph(graph, analysis, [{ text: 'x', role: 'title' }])
+  assert.deepEqual(layout.rows.map((row) => row.layer), [0, 1, 2, 3, 4])
+
+  // Read off the drawn document rather than the layout object: each step's
+  // title sits lower on the canvas than the step before it.
+  const drawn = ['First', 'Second', 'Third', 'Approved', 'Stranded'].map((text) => {
+    const match = new RegExp(`<text class="node-title" x="\\d+" y="(\\d+)">${text}<`).exec(diagram)
+    assert.notEqual(match, null, `${text} was not drawn`)
+    return Number(match[1])
+  })
+  for (const [index, y] of drawn.entries()) {
+    if (index === 0) continue
+    assert.ok(y > drawn[index - 1], `${index}: a later step was drawn above an earlier one`)
+  }
+  // The band of steps no path reaches is the last one, under everything else.
+  assert.equal(layout.rows.at(-1).banner, 'not reachable from the start step')
 })
 
 test('a step no path reaches is drawn apart, and says so on the step', () => {

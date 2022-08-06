@@ -17,7 +17,16 @@ import { GRAPH, graphWith, step, workspace } from './support.mjs'
  * code units and collation, pushes them through the real report and the real
  * diagram, and asserts the exact order that comes out. `Zeta` before `alpha`
  * is the workhorse: `Z` is U+005A and `a` is U+0061, so code units put `Zeta`
- * first while every collation puts it last.
+ * first while every collation puts it last. `a-b` before `a_b` is the other
+ * one: U+002D is below U+005F, and collation reverses the pair.
+ *
+ * There is one case per site that orders anything reaching the output, because
+ * a helper pinned in isolation pins the helper and not its callers: every call
+ * site can be swapped on its own. The two sites no fixture can distinguish are
+ * named where they are: `location.file`, which is one value in any run, and
+ * the rule-id comparator, whose alphabet -- lower-case letters, digits and the
+ * hyphen -- puts code units and collation in agreement on all 1681 ordered
+ * pairs of the forty-one documented ids.
  */
 
 const CODE_UNIT_ORDER = Object.freeze(['README', 'Zeta', 'a-b', 'a_b', 'ab', 'alpha', 'assets'])
@@ -119,6 +128,68 @@ test('cycles are reported in code-unit order, each rotated to its smallest id', 
     report.findings.filter((item) => item.ruleId === 'approval-cycle').map((item) => item.evidence),
     ['Zeta -> alpha -> Zeta', 'a_b -> ab -> a_b'],
   )
+})
+
+test('the loops a tangle reports are decided by the node order this tool fixes', async () => {
+  // The compiled node order is the order the cycle search takes its depth-first
+  // roots in, which decides WHICH loops of an overlapping region get reported.
+  // These three ids are `Zeta, a_b, ab` by code unit and `a_b, ab, Zeta` under
+  // collation, and the two orders report different sets: rooted at Zeta the
+  // walk finds two loops, rooted at a_b it finds three, and
+  // "Zeta -> ab -> Zeta" -- a loop nothing in the file traverses that way --
+  // appears in the report. Both are honest back-edge searches. Only one of them
+  // gives the same answer on every machine, and it is the one asserted here.
+  const value = graphWith([
+    step({ id: 'Zeta', edges: [{ to: 'a_b', condition: 'to a_b' }, { to: 'ab', condition: 'to ab' }] }),
+    step({ id: 'a_b', edges: [{ to: 'ab', condition: 'onwards' }] }),
+    step({ id: 'ab', edges: [{ to: 'Zeta', condition: 'back' }, { to: 'a_b', condition: 'back again' }] }),
+  ])
+  value.nodes[0].edges.push({ to: 'Zeta', condition: 'into the tangle' })
+
+  const { report, graph } = await reportFor(value)
+  assert.deepEqual(graph.nodes.map((node) => node.id), ['Zeta', 'a_b', 'ab', 'approved', 'intake'])
+  assert.deepEqual(
+    report.findings.filter((item) => item.ruleId === 'approval-cycle').map((item) => item.evidence),
+    ['Zeta -> a_b -> ab -> Zeta', 'a_b -> ab -> a_b'],
+  )
+  assert.equal(report.summary.cycles, 2)
+  assert.equal(report.summary.errors, 2)
+})
+
+test('two findings sharing a pointer and a rule are ordered by their message, by code unit', async () => {
+  // The last comparator in the report sort, and the only fixture that reaches
+  // it: two loops through one step, canonically rotated to the same first id,
+  // so file, pointer and ruleId are all equal and the message alone decides.
+  // `Zeta` before `alpha` is code units; every collation puts it the other way.
+  const value = graphWith([
+    step({
+      id: 'A',
+      edges: [
+        { to: 'Zeta', condition: 'one way' },
+        { to: 'alpha', condition: 'the other' },
+        { to: 'approved', condition: 'done' },
+      ],
+    }),
+    step({ id: 'Zeta', edges: [{ to: 'A', condition: 'back' }] }),
+    step({ id: 'alpha', edges: [{ to: 'A', condition: 'back' }] }),
+  ])
+  value.nodes[0].edges.push({ to: 'A', condition: 'into the loops' })
+
+  const { report } = await reportFor(value)
+  assert.deepEqual(report.findings.map((item) => [item.location.pointer, item.ruleId]), [
+    ['/nodes/A', 'approval-cycle'],
+    ['/nodes/A', 'approval-cycle'],
+  ])
+  assert.deepEqual(report.findings.map((item) => item.message), [
+    'Approval cycle: A -> Zeta -> A. A request that enters it can be sent round forever.',
+    'Approval cycle: A -> alpha -> A. A request that enters it can be sent round forever.',
+  ])
+
+  // And the premise that makes the first comparator in that sort untestable:
+  // one run reads one file, so every row carries the same `location.file` and
+  // no pair of findings can disagree about it. It is kept because the sort key
+  // is documented as four fields, not because a fixture could distinguish it.
+  assert.deepEqual([...new Set(report.findings.map((item) => item.location.file))], ['approval.json'])
 })
 
 test('the approvers listed in a message keep the order the graph declared', async () => {
