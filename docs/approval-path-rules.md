@@ -4,6 +4,11 @@ This document is the contract. `src/index.mjs` holds one frozen `ruleId -> sever
 `test/severity-table.test.mjs` asserts that table against the catalog below in **both** directions,
 so a rule cannot be added, renamed or re-graded on one side alone.
 
+Those are two declarations, and one edit can move both. Every rule in the catalog is therefore
+pinned a second time by what a run of it does, in `test/severity-pins.test.mjs`: that file imports
+no table, reads no catalog and holds no map of expected values, so an edit here and in the table
+cannot reach it.
+
 ## The graph
 
 One JSON file describes one approval path. Every key is closed: an unknown key is a finding, not

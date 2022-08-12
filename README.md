@@ -167,13 +167,23 @@ deleting that line, watching the suite go red, and putting it back.
   `approvers-duplicate` all run on the whole sanitised value, so lowering the bound cannot invent a
   finding about a graph that is fine.
 - **Every finding's severity comes from one frozen table**, asserted against the documented catalog
-  in both directions — and, because three agreeing declarations can be edited together, every rule
-  that can decide a verdict is pinned again by behaviour: a real graph through the real binary,
-  asserting the exit code, in a file that imports no table.
+  in both directions — and, because agreeing declarations can be edited together, all forty-one
+  rules are pinned again by behaviour in a file that imports no table, reads no catalog and holds no
+  map of expected values. Each expectation there is a literal at its assertion: status, exit code
+  and counted errors for a rule that decides a verdict; counted errors and the severity word printed
+  on that rule's own line for one that leaves the run `incomplete`, where the exit code is 2 either
+  way. A coordinated edit to the table, the catalog and every parameterised expectation in the suite
+  fails on all thirty-one error rules and on all ten that must not fail a run.
 - **No wall clock, locale, `localeCompare`, collator, random source, network access or filesystem
-  enumeration order affects the output.** Every emitted order is pinned by asserting the order that
-  comes out for ids that collate differently from their code-unit order, so substituting a collator
-  fails a test rather than quietly making the output depend on the host's ICU data.
+  enumeration order affects the output.** Every site that orders something reaching the output is
+  pinned at the site — pinning the comparator alone pins the comparator, and each of its callers can
+  still be swapped one at a time. Each case pushes ids that collate differently from their code-unit
+  order through the real entry point and asserts the exact sequence that comes out, so substituting
+  a collator anywhere fails a test rather than quietly making the output depend on the host's ICU
+  data. Two comparisons are exceptions and are named as such in `test/ordering.test.mjs`:
+  `location.file`, which is one value in any run because a run reads one file, and the rule-id
+  comparison, whose alphabet puts code units and collation in agreement on all 1681 ordered pairs of
+  the forty-one documented ids. Neither can be distinguished by any fixture.
 - **A diagram drawn from incomplete evidence says so on its face**, because a picture outlives the
   report that produced it.
 

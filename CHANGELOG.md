@@ -81,23 +81,54 @@ All notable changes to this project are documented in this file.
 
 - No code path in this package writes to the graph it was asked to draw. The
   input is byte-identical, to the millisecond, after any run, and the diagram is
-  written only to a destination outside the input root.
+  written only to a destination outside the input root — and never to the graph
+  file reached by a second name. `realpath` resolves a symbolic link, but a hard
+  link has no target: two names for one inode resolve to two different paths, so
+  identity is decided on `(device, inode)`.
 - A run that read no approval step is `incomplete` and exits 2. `pass` with
   `checked: 0` is not reachable.
 - Every finding takes its severity from one frozen `ruleId -> severity` table;
   an unknown rule id throws, and the table is asserted against the documented
   catalog in both directions and against the rules the source emits. Those are
-  three declarations, and a coordinated edit to all three agrees with itself, so
-  every rule whose severity can decide a verdict is pinned again by behaviour: a
-  real graph through the real binary, asserting the rules reported, the status
-  and the exit code, with nothing in that file reading the table.
+  declarations, and a coordinated edit to all of them agrees with itself, so all
+  forty-one rules are pinned again by behaviour in a file that imports no table,
+  reads no catalog and holds no map of expected values — every expectation there
+  is a literal at its assertion. A rule that decides a verdict is pinned by the
+  status, the exit code and the counted errors; a rule that leaves the run
+  `incomplete`, where the exit code is 2 either way, by the counted errors and
+  the severity word printed on its own line.
 - No wall clock, locale, `localeCompare`, collator, random source, network
-  access or filesystem enumeration order affects the output. Every order the
-  report and the diagram expose is pinned by asserting the emitted order for ids
-  that sort differently under collation than by code unit, so substituting a
-  collator — under any spelling a source scan would miss — fails a test rather
-  than silently making the output depend on the host's ICU data.
+  access or filesystem enumeration order affects the output. Every site that
+  orders something reaching the output is pinned at that site, by ids that sort
+  differently under collation than by code unit driven through the real entry
+  point, so substituting a collator — under any spelling a source scan would
+  miss, at any one call site — fails a test rather than silently making the
+  output depend on the host's ICU data. The two comparisons no fixture can
+  distinguish are named in `test/ordering.test.mjs`: the file name, which is one
+  value in any run, and the rule id, whose alphabet leaves code units and
+  collation in agreement on all 1681 ordered pairs of the documented ids.
 - Every guarantee above was checked by deleting the line that enforces it,
   watching the suite go red, and restoring it.
+
+### Fixed
+
+- **a diagram destination that was the input file under another name.** A hard
+  link to the graph, made anywhere outside `--root`, is its own real path:
+  containment saw two different files and the write truncated the graph the run
+  had just read, with exit 0 and a "diagram written" line on stderr.
+  `resolveDiagramDestination` now takes the resolved graph path and compares
+  `(device, inode)`, and the CLI hands it over before anything is read;
+- **a display bound deciding what a value means.** `maxLabelLength` cut a value
+  and the judgements then ran on what was left: at `--max-label-length 5` the
+  clean example failed with three outcomes "outside the vocabulary" and five
+  pairs of visibly different conditions reported as ambiguous, and at the
+  default of 120 two conditions differing in their 126th character were one
+  condition and the second of two approvers was dropped as a repeat. The
+  vocabulary check and the duplicate comparisons now run on the whole sanitised
+  value; what a finding quotes is still the bounded display text;
+- **a withheld verdict that could be claimed.** `too-many-edges` raised for an
+  exception list, and a `start` that is not an identifier at all, both left the
+  run `incomplete` and neither was pinned, so either could become a claimed
+  verdict with the suite green. Both are now driven through the real binary.
 
 No release has been published.

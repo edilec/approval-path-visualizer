@@ -70,11 +70,16 @@ export const DEFAULT_LIMITS = Object.freeze({
  * from here, an unknown rule id throws, and `docs/approval-path-rules.md` is
  * asserted against this table in both directions.
  *
- * That is the source of truth, and it is not the guard: three agreeing
- * declarations can be edited together. Every rule whose severity can decide a
- * verdict is additionally pinned by behaviour in
- * `test/severity-behaviour.test.mjs`, which drives a real graph through the
- * real binary and asserts the exit code.
+ * That is the source of truth, and it is not the guard: agreeing declarations
+ * can be edited together, and a test that drives the real binary and then
+ * compares against a severity in a map the same edit touches is a fourth
+ * declaration, not a guard. So every rule here is pinned again in
+ * `test/severity-pins.test.mjs`, which imports no table, reads no catalog and
+ * holds no map: one case per rule, every expectation a literal at its
+ * assertion -- status, exit code and counted errors for a rule that decides a
+ * verdict, and the counted errors plus the severity word the human report
+ * prints for one that leaves the run `incomplete`, where the exit code is 2
+ * whichever way the rule is graded.
  */
 export const RULE_SEVERITY = Object.freeze({
   'approval-cycle': 'error',
