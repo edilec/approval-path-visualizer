@@ -29,7 +29,7 @@ import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path'
 
 import { analyseGraph, compileGraph, outgoingLinks } from './graph.mjs'
 import { RENDER_FORMATS, renderDiagram } from './render.mjs'
-import { byCodeUnit, decodeUtf8, excerpt, isPlainObject } from './text.mjs'
+import { byCodeUnit, decodeUtf8, excerpt, isPlainObject, parseFailureDetail } from './text.mjs'
 
 export const TOOL_ID = 'approval-path-visualizer'
 export const REPORT_SCHEMA_VERSION = '1'
@@ -435,7 +435,7 @@ export async function visualizeApprovalPath(options = {}) {
       ruleId: 'graph-not-json',
       pointer: '/',
       message: 'Graph file is not valid JSON; it was not parsed and nothing was drawn from it.',
-      evidence: excerpt(error.message, 120),
+      evidence: excerpt(parseFailureDetail(error), 120),
       incomplete: true,
     })
     return { report: buildReport(rows, incomplete, null, null), diagram: null, graph: null, analysis: null, file }
@@ -534,5 +534,6 @@ export {
   isIdentifier,
   markupText,
   parseDuration,
+  parseFailureDetail,
   wrapText,
 } from './text.mjs'

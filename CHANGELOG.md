@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- `graph-not-json` no longer reproduces the graph file inside its own evidence.
+  `JSON.parse` reports a failure either by position or by quoting the input
+  back — `Unexpected token 'A', "AKIAIOSFODNN7EXAMPLE" is not valid JSON`, which
+  is the whole document when the document is short — and that quote sits at the
+  front of the message, where sanitising and excerpting both leave it intact. A
+  graph file short enough to be only a credential was therefore published in
+  full by the finding that failed to read it. Evidence is now built from the
+  position, line and column alone.
+
 ### Added
 
 - an explicit approval graph — steps, approvers, branch conditions, timeouts and

@@ -169,6 +169,13 @@ each, in this order:
    is safe in an attribute; `>` as well as `<`, which is what stops a value ending `]]>` from
    closing a CDATA section in a consuming document and `-->` from ending a comment.
 
+Neither pass keeps the graph's *content* out of a report, and one message does carry content:
+`JSON.parse` reports a failure either by position or by quoting the input back — `Unexpected token
+'A', "AKIAIOSFODNN7EXAMPLE" is not valid JSON`, which is the entire document when the document is
+short. That quote is at the front of the message, so stripping controls and cutting from the end
+both leave it intact. The `graph-not-json` evidence is built from the position, line and column
+alone; the quoted input is discarded before anything is recorded.
+
 A control character in an **identifier** is refused outright rather than cleaned: a node id that
 prints differently from the id that was compared is one nobody can audit.
 

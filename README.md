@@ -124,6 +124,13 @@ Two passes run on every untrusted value, in this order, and there is one functio
 A control character in an **identifier** is refused outright instead of cleaned: a node id that
 prints differently from the id that was compared is one nobody can audit.
 
+Sanitising is not what keeps the graph's *content* out of a report. `JSON.parse` names the input
+in one of its two failure messages — `Unexpected token 'A', "AKIAIOSFODNN7EXAMPLE" is not valid
+JSON`, the whole document when it is short — and that quote sits at the front of the message, where
+neither stripping controls nor cutting from the end removes it. The `graph-not-json` evidence is
+therefore built from the failure's **position, line and column only**; the quoted input never leaves
+the function that reads it.
+
 ## Exit codes
 
 | Code | Meaning | stdout |
