@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 
 import { visualizeApprovalPath } from '../src/index.mjs'
-import { GRAPH, args, cli, graphWith, projectDirectory, step, workspace } from './support.mjs'
+import { GRAPH, args, cli, graphWith, outArgs, projectDirectory, step, workspace } from './support.mjs'
 
 /**
  * One test per guarantee the README and the docs make.
@@ -21,7 +21,7 @@ test('the graph file is never written to, with or without a diagram destination'
 
     await visualizeApprovalPath({ root, graph: 'approval.json' })
     await visualizeApprovalPath({ root, graph: 'approval.json', format: 'html' })
-    const viaCli = await cli(args(root, ['--out', out]))
+    const viaCli = await cli(args(root, outArgs(out)))
     assert.equal(viaCli.code, 0)
 
     assert.deepEqual(await readFile(graphPath), before)
@@ -100,7 +100,7 @@ test('the same inputs are not incomplete when they are readable', async () => {
 
 test('a run that could not compile a graph draws nothing and says so', async () => {
   await workspace(async ({ root, out }) => {
-    const result = await cli(args(root, ['--out', out]))
+    const result = await cli(args(root, outArgs(out)))
     assert.equal(result.code, 2)
     assert.match(result.stderr, /no diagram was written/)
     await assert.rejects(() => readFile(out), { code: 'ENOENT' })
@@ -109,8 +109,8 @@ test('a run that could not compile a graph draws nothing and says so', async () 
 
 test('two runs over the same bytes produce byte-identical stdout and diagram', async () => {
   await workspace(async ({ root, out, outside }) => {
-    const first = await cli(args(root, ['--out', out]))
-    const second = await cli(args(root, ['--out', join(outside, 'again.svg')]))
+    const first = await cli(args(root, outArgs(out)))
+    const second = await cli(args(root, outArgs(join(outside, 'again.svg'))))
     assert.equal(first.stdout, second.stdout)
     assert.deepEqual(await readFile(out), await readFile(join(outside, 'again.svg')))
   }, { graph: graphWith([step({ id: 'stranded' })]) })
@@ -199,7 +199,7 @@ test('nothing under src reads a clock, a random source or the network', async ()
 test('the diagram destination is refused before anything is read, not after', async () => {
   await workspace(async ({ root }) => {
     await writeFile(join(root, 'approval.json'), '{ broken', 'utf8')
-    const result = await cli(args(root, ['--out', join(root, 'diagram.svg')]))
+    const result = await cli(args(root, ['--out', join(root, 'diagram.svg'), '--out-root', root]))
     // stdout is empty: a configuration error means the run never had a
     // subject, so there is nothing to report about.
     assert.equal(result.code, 2)

@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 
 import { isInside, isSameFile, resolveDiagramDestination, visualizeApprovalPath } from '../src/index.mjs'
-import { GRAPH, args, cli, workspace } from './support.mjs'
+import { GRAPH, args, cli, outArgs, workspace } from './support.mjs'
 
 /**
  * Confinement, decided on real paths.
@@ -86,11 +86,12 @@ test('a diagram destination inside the input root is refused', async () => {
       () => resolveDiagramDestination(root, join(root, 'diagram.svg')),
       /must be written elsewhere/,
     )
+    await mkdir(join(root, 'nested', 'deep'), { recursive: true })
     await assert.rejects(
       () => resolveDiagramDestination(root, join(root, 'nested', 'deep', 'diagram.svg')),
       /must be written elsewhere/,
     )
-    const result = await cli(args(root, ['--out', join(root, 'diagram.svg')]))
+    const result = await cli(args(root, ['--out', join(root, 'diagram.svg'), '--out-root', root]))
     assert.equal(result.code, 2)
     assert.equal(result.stdout, '')
     assert.match(result.stderr, /--out is not usable/)
@@ -111,7 +112,7 @@ test('a destination whose parent is a symlink into the root is refused too', asy
 test('a destination outside the root is written, and the graph file is not touched', async () => {
   await workspace(async ({ root, out, graphPath }) => {
     const before = await readFile(graphPath)
-    const result = await cli(args(root, ['--out', out]))
+    const result = await cli(args(root, outArgs(out)))
     assert.equal(result.code, 0)
     const after = await readFile(graphPath)
     assert.deepEqual(after, before)
@@ -151,10 +152,10 @@ test('a destination that is the graph file under another name is refused, and th
 
     await assert.rejects(
       () => resolveDiagramDestination(root, decoy, graphPath),
-      /the graph file itself under another name/,
+      /same file as an input/,
     )
 
-    const result = await cli(args(root, ['--out', decoy]))
+    const result = await cli(args(root, outArgs(decoy)))
     assert.equal(result.code, 2)
     assert.equal(result.stdout, '')
     assert.match(result.stderr, /--out is not usable/)
@@ -166,7 +167,7 @@ test('a destination that is the graph file under another name is refused, and th
 
 test('a destination that is a directory is refused rather than written into', async () => {
   await workspace(async ({ root, outside }) => {
-    await assert.rejects(() => resolveDiagramDestination(root, outside), /is a directory, not a file/)
+    await assert.rejects(() => resolveDiagramDestination(root, outside), /not a regular file/)
   })
 })
 
@@ -204,10 +205,11 @@ test('a destination with no usable path at all is refused', async () => {
         String(destination),
       )
     }
-    // The ancestor probe is bounded: a path nested deeper than the probe can
-    // walk is refused by name rather than looping.
+    // A destination whose directory is not there is refused rather than
+    // created. The point of the check is that the diagram lands where the path
+    // reads, and a path with no directory yet does not read as anywhere.
     const deep = join(outside, ...Array.from({ length: 70 }, (_, index) => `d${index}`), 'diagram.svg')
-    await assert.rejects(() => resolveDiagramDestination(root, deep), /nested too deeply to resolve/)
+    await assert.rejects(() => resolveDiagramDestination(root, deep), /directory that does not exist/)
   })
 })
 

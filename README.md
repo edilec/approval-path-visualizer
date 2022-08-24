@@ -37,6 +37,12 @@ approval-path-visualizer \
   --out build/approval-path.svg
 ```
 
+`--out` must resolve inside `--out-root`, which defaults to the working directory, and inside a
+directory that already exists. A symbolic link at `--out`, a symlinked directory on the way to it,
+and a hard link to the graph file are each refused before anything is opened: every one of them
+writes the diagram over a file the tool was never asked to touch, and every one of them did so here
+while the run exited 0.
+
 ```
 capital purchase approval (approval.json): 5 approval step(s), 3 outcome(s), 6 approver(s), status pass.
 paths: 11 edge(s), 5 timeout(s), 2 exception exit(s), 0 unreachable step(s), 0 cycle(s).
@@ -71,9 +77,11 @@ const { report, diagram, graph, analysis } = await visualizeApprovalPath({
 
 `visualizeApprovalPath` reads; it never writes. `diagram` is a string, and where it goes is the
 caller's decision — `writeDiagram` is offered for convenience and refuses nothing on its own, which
-is why the CLI resolves the destination with `resolveDiagramDestination(root, out, graphPath)`
-first. Pass that third argument: it is what refuses a destination that is the graph file reached by
-another name.
+is why the CLI resolves the destination with
+`resolveDiagramDestination(root, out, graphPath, { root: outRoot })` first. Pass the graph path: it
+is what refuses a destination that is the graph file reached by another name, which no containment
+check can see. `assertWritableDestination` is exported too, for a caller writing its own
+destination logic.
 
 The pure pieces are exported too: `compileGraph`, `analyseGraph`, `renderDiagram`, `layoutGraph`,
 `findCycles`, `layerFromStart`, `canonicalCycle`, `escapeMarkup`, `markupText`, `parseDuration`.

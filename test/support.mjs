@@ -119,6 +119,19 @@ export function args(root, extra = []) {
 }
 
 /**
+ * `--out` together with the root it is permitted to resolve inside.
+ *
+ * `--out-root` defaults to the working directory, which for a spawned CLI is
+ * the package, so a destination in a temporary directory needs the root
+ * declared. Tests about rendering, determinism or the human summary say it
+ * this way so that they are not quietly also testing destination policy;
+ * `test/destination.test.mjs` is where that policy is pinned.
+ */
+export function outArgs(out) {
+  return ['--out', out, '--out-root', dirname(out)]
+}
+
+/**
  * Every element name the rendered document contains.
  *
  * This is how the escaping tests state their assertion: a label that tried to

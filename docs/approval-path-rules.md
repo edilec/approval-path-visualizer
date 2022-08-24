@@ -194,17 +194,22 @@ a byte-identical diagram.
 ## The diagram destination
 
 The diagram is derived from the graph, and writing it back into the tree the graph lives in is how a
-read-only tool modifies its own input on the next run. `--out` is refused when:
+read-only tool modifies its own input on the next run. That was never the only way to lose a file to
+`--out`, and the version of this tool that checked only containment and identity was measured
+destroying files outside the root while exiting 0. `--out` is refused when:
 
-- it resolves inside `--root`, including through a symbolically linked parent directory; or
-- it is a directory; or
-- it names the graph file itself under a second name.
+| Refused | Why the obvious guard misses it |
+| --- | --- |
+| It is a **symbolic link** | `realpath` on the destination *resolves* the link, and resolving is the dangerous act: the write then goes wherever the link points. It is refused on sight with `lstat`, whether or not its target exists yet — a dangling link creates the diagram outside the tree instead of destroying something in it. |
+| A **symlinked directory** lies on the way to it | A lexical prefix check passes for `root/link/out.svg` where `link` leaves the root. The parent is resolved, then compared. |
+| It resolves outside `--out-root` | `--out-root` defaults to the working directory and must be named explicitly to widen it. |
+| It names the **graph file under a second name** | `realpath` resolves a symbolic link, but a hard link has no target: `cp -l`, a package store and a backup snapshot all produce two names for one inode, and those two names resolve to two different real paths. A path comparison says "different file" and the write truncates the graph. File identity is the `(device, inode)` pair. |
+| It resolves inside `--root` | Whatever `--out-root` permits. Resolved parent against resolved root, in both directions. |
+| It is a directory, or its directory does not exist | A destination is a file, at a path that already reads as somewhere. |
 
-That last one is not the same check as the first. `realpath` resolves a symbolic link, but a hard
-link has no target: `cp -l`, a package store and a backup snapshot all produce two names for one
-inode, and those two names resolve to two different real paths. A path comparison says "different
-file" and the write truncates the graph. File identity is the `(device, inode)` pair, so that is
-what is compared, before any byte is written.
+Every one of those is a configuration error: exit 2, and stdout stays empty. `test/destination.test.mjs`
+pins one case per row and one per allowed shape, because a guard that refuses everything passes a
+data-loss test while making the tool useless.
 
 ## Output
 

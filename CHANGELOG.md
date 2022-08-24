@@ -6,6 +6,22 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- `--out` accepted a destination that destroyed a file the tool was never asked
+  to touch, and reported success while doing it. `resolveDiagramDestination`
+  resolved the destination through its nearest existing ancestor, so a
+  **symbolic link at `--out`** was resolved by that very call and the diagram
+  was written through it: measured here, a 14-byte file outside the root became
+  an 11117-byte SVG while the run exited 0 and printed `diagram written`. A
+  link whose target did not exist yet created the file out there instead, and a
+  **symlinked parent directory** did the same thing one level up with nothing
+  comparing the resolved parent against a permitted root, because there was no
+  permitted root. Both are now refused by `assertWritableDestination` before
+  anything is opened; the hard-link refusal that was already here is now made
+  by the same guard, by device and inode. A refused destination is a
+  configuration error: exit 2, empty stdout. `test/destination.test.mjs` has
+  one case per hole and one per allowed shape, and every check in the guard has
+  a mutation that reddens the test named for it.
+
 - `graph-not-json` no longer reproduces the graph file inside its own evidence.
   `JSON.parse` reports a failure either by position or by quoting the input
   back — `Unexpected token 'A', "AKIAIOSFODNN7EXAMPLE" is not valid JSON`, which
@@ -17,6 +33,10 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- `--out-root`, declaring the tree `--out` may resolve inside. It defaults to
+  the working directory and has no meaning without `--out`;
+- `assertWritableDestination` and `DestinationError`, exported for a caller
+  writing its own destination logic;
 - an explicit approval graph — steps, approvers, branch conditions, timeouts and
   exception exits — compiled from data, with every unknown key at every level
   refused rather than ignored, and every structurally defective node dropped

@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import test from 'node:test'
 
-import { GRAPH, args, cli, graphWith, step, workspace } from './support.mjs'
+import { GRAPH, args, cli, graphWith, outArgs, step, workspace } from './support.mjs'
 
 /**
  * The command line surface: the two shapes of exit 2, the three exit codes,
@@ -109,7 +109,7 @@ test('evidence that could not be obtained exits 2 with a report on stdout', asyn
 
 test('the human report prints the summary, the diagram path and one line per finding', async () => {
   await workspace(async ({ root, out }) => {
-    const result = await cli(['--root', root, '--graph', 'approval.json', '--out', out])
+    const result = await cli(['--root', root, '--graph', 'approval.json', ...outArgs(out)])
     const lines = result.stdout.trimEnd().split('\n')
     assert.match(lines[0], /^test approval \(approval\.json\): 2 approval step\(s\), 1 outcome\(s\)/)
     assert.match(lines[1], /^paths: /)
@@ -121,11 +121,11 @@ test('the human report prints the summary, the diagram path and one line per fin
 
 test('--out writes the format that was asked for, and nothing when it is not given', async () => {
   await workspace(async ({ root, out, outside }) => {
-    await cli(args(root, ['--out', out]))
+    await cli(args(root, outArgs(out)))
     assert.ok((await readFile(out, 'utf8')).startsWith('<svg xmlns='))
 
     const htmlPath = join(outside, 'diagram.html')
-    await cli(args(root, ['--out', htmlPath, '--format', 'html']))
+    await cli(args(root, [...outArgs(htmlPath), '--format', 'html']))
     assert.ok((await readFile(htmlPath, 'utf8')).startsWith('<!doctype html>'))
 
     const withoutOut = await cli(args(root))

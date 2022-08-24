@@ -30,6 +30,9 @@ import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path'
 import { analyseGraph, compileGraph, outgoingLinks } from './graph.mjs'
 import { RENDER_FORMATS, renderDiagram } from './render.mjs'
 import { byCodeUnit, decodeUtf8, excerpt, isPlainObject, parseFailureDetail } from './text.mjs'
+import { DestinationError, assertWritableDestination } from './write-guard.mjs'
+
+export { DestinationError, assertWritableDestination } from './write-guard.mjs'
 
 export const TOOL_ID = 'approval-path-visualizer'
 export const REPORT_SCHEMA_VERSION = '1'
@@ -212,42 +215,59 @@ export async function isSameFile(left, right) {
 }
 
 /**
- * Resolve the diagram destination and refuse anything inside the input root.
+ * Resolve the diagram destination and refuse everything that would put it
+ * somewhere other than the file the caller named.
  *
  * The diagram is derived from the graph; writing it back into the tree the
  * graph lives in is how a "read-only" tool ends up modifying its own input on
- * the next run.
+ * the next run. Containment was never the whole of it, and the version of this
+ * function that only resolved and compared was measured destroying files:
  *
- * Containment is not the whole of it. A hard link to the graph file, sitting
- * anywhere outside the root, resolves to its own path and passes every
- * containment check ever written -- and `writeFile` to it truncates the graph
- * this run was asked to read. So when the caller knows which file the graph
- * was read from, the destination is compared with it by device and inode as
- * well, and a match is refused before a single byte is written.
+ * - `--out` pointing at a SYMBOLIC LINK: `resolveThroughAncestors` resolved the
+ *   link on its first `realpath` call and handed back the target, so the write
+ *   went wherever the link pointed. A 14-byte file outside the root became an
+ *   11117-byte SVG while the run exited 0 and printed "diagram written". A link
+ *   whose target did not exist yet created the file out there instead.
+ * - `--out` under a SYMLINKED PARENT: lexically inside the tree the caller
+ *   named, actually outside it, and nothing compared the resolved parent with a
+ *   permitted root because there was no permitted root.
+ * - `--out` as a HARD LINK to the graph: this one was already refused, and it
+ *   stays refused, now by identity inside the shared guard rather than here.
+ *
+ * `assertWritableDestination` answers all three. Two things are layered on top
+ * of it, because the guard cannot know them: the input root, which the diagram
+ * must stay out of whatever `--out-root` permits, and the graph file, which is
+ * passed as an input so device and inode can see a second name for it.
  */
-export async function resolveDiagramDestination(rootReal, destination, graphReal = null) {
+export async function resolveDiagramDestination(rootReal, destination, graphReal = null, options = {}) {
   if (typeof destination !== 'string' || destination.trim() === '') {
     throw new TypeError('Diagram destination must be a non-empty path')
   }
-  const resolved = await resolveThroughAncestors(resolve(destination))
-  if (isInside(rootReal, resolved)) {
+  const { root = null } = options
+
+  let resolved
+  try {
+    resolved = await assertWritableDestination(destination, {
+      inputs: graphReal === null ? [] : [graphReal],
+      root,
+      label: '--out',
+      rootLabel: '--out-root',
+    })
+  } catch (error) {
+    if (!(error instanceof DestinationError)) throw error
+    throw new TypeError(error.message)
+  }
+
+  // The destination itself is not a link -- the guard just refused that shape
+  // -- so resolving its parent is the whole of the resolution. Containment is
+  // then real path against real path in both directions: comparing a resolved
+  // destination with an unresolved root refuses every legitimate destination on
+  // a host where the input tree sits under a symlinked ancestor.
+  const parentReal = await realpath(dirname(resolved))
+  if (isInside(rootReal, join(parentReal, basename(resolved)))) {
     throw new TypeError(
       'Diagram destination is inside the input root; the diagram is a derived artifact and must be written elsewhere',
     )
-  }
-  if (graphReal !== null && await isSameFile(resolved, graphReal)) {
-    throw new TypeError(
-      'Diagram destination is the graph file itself under another name (a hard link); writing it would destroy the input',
-    )
-  }
-  try {
-    const info = await stat(resolved)
-    if (info.isDirectory()) throw new TypeError('Diagram destination is a directory, not a file')
-  } catch (error) {
-    if (error instanceof TypeError) throw error
-    if (error.code !== 'ENOENT' && error.code !== 'ENOTDIR') {
-      throw new TypeError(`Diagram destination could not be inspected: ${error.code ?? 'unknown error'}`)
-    }
   }
   return resolved
 }

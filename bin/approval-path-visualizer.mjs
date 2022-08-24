@@ -25,6 +25,8 @@ Options:
   --root DIR                Directory holding the approval graph (required)
   --graph FILE              Graph file, relative to --root (required)
   --out FILE                Write the diagram here; must be outside --root
+  --out-root DIR            Tree --out must resolve inside (default: the
+                            working directory)
   --format svg|html         Diagram format (default svg)
   --json                    Emit the machine-readable report on stdout
   --max-graph-bytes N       Maximum graph file size (default 1048576)
@@ -39,8 +41,12 @@ Options:
 Every option is accepted once: a repeated flag is a configuration error, not a
 silent last-wins.
 
-The graph is read, never written. The diagram is a derived artifact and its
-destination is refused if it resolves inside --root.
+The graph is read, never written. The diagram is a derived artifact, and four
+shapes of destination are refused before anything is opened: a symbolic link at
+--out (following it writes wherever the link points, which is not the path you
+named), a symlinked directory on the way there, a path resolving outside
+--out-root, and a hard link to the graph file. A destination inside --root is
+refused whatever --out-root says.
 
 An approval step no path reaches, and an approval cycle, are both errors. A run
 that read no step is "incomplete", never a pass, and a run whose path traversal
@@ -66,7 +72,7 @@ const LIMIT_FLAGS = new Map([
 
 function parseArguments(argv) {
   if (argv.includes('-h') || argv.includes('--help')) return { help: true }
-  const options = { root: null, graph: null, out: null, format: null, json: false, limits: {} }
+  const options = { root: null, graph: null, out: null, outRoot: null, format: null, json: false, limits: {} }
   const given = new Set()
 
   /**
@@ -103,6 +109,9 @@ function parseArguments(argv) {
     } else if (argument === '--out') {
       once('--out')
       options.out = takeValue('--out')
+    } else if (argument === '--out-root') {
+      once('--out-root')
+      options.outRoot = takeValue('--out-root')
     } else if (argument === '--format') {
       once('--format')
       options.format = takeValue('--format')
@@ -123,6 +132,9 @@ function parseArguments(argv) {
 
   if (options.root === null) throw new Error('--root is required')
   if (options.graph === null) throw new Error('--graph is required')
+  if (options.outRoot !== null && options.out === null) {
+    throw new Error('--out-root has no meaning without --out')
+  }
   return options
 }
 
@@ -165,7 +177,9 @@ async function main(argv) {
   let destination = null
   if (options.out !== null) {
     try {
-      destination = await resolveDiagramDestination(rootReal, options.out, graphReal)
+      destination = await resolveDiagramDestination(rootReal, options.out, graphReal, {
+        root: options.outRoot ?? process.cwd(),
+      })
     } catch (error) {
       process.stderr.write(`--out is not usable: ${excerpt(error.message, 200)}\n`)
       return 2
