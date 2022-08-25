@@ -30,7 +30,7 @@ test('excerpt flattens, bounds and reports its truncation', () => {
 test('hasControlCharacters sees what excerpt removes, and nothing else', () => {
   assert.equal(hasControlCharacters('plain text'), false)
   assert.equal(hasControlCharacters('a line\nbreak'), false)
-  assert.equal(hasControlCharacters('bell'), true)
+  assert.equal(hasControlCharacters(`bell${String.fromCharCode(0x07)}`), true)
   assert.equal(hasControlCharacters('nel\u0085'), true)
   assert.equal(hasControlCharacters('override\u202e'), true)
 })
