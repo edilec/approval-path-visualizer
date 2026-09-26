@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1",
+  "name": "vendor onboarding approval <needs review>",
+  "start": "intake",
+  "nodes": [
+    {
+      "id": "intake",
+      "kind": "approval",
+      "label": "Intake",
+      "approvers": ["operations-desk"],
+      "edges": [
+        { "to": "budget-check" },
+        { "to": "legal-review", "condition": "contract attached" }
+      ],
+      "exceptions": [
+        { "to": "cancelled", "reason": "requester cancelled" }
+      ]
+    },
+    {
+      "id": "budget-check",
+      "kind": "approval",
+      "label": "<script>alert('who approves?')</script>",
+      "approvers": ["finance-controller"],
+      "timeout": { "after": "P1D", "to": "nowhere-at-all" },
+      "edges": [
+        { "to": "approved", "condition": "amount <= budget && vendor approved" },
+        { "to": "vendor-hold", "condition": "vendor not approved" }
+      ]
+    },
+    {
+      "id": "vendor-hold",
+      "kind": "approval",
+      "label": "Vendor hold ]]> --><!--",
+      "approvers": ["procurement-team"]
+    },
+    {
+      "id": "legal-review",
+      "kind": "approval",
+      "label": "Legal review",
+      "approvers": ["legal-counsel"],
+      "timeout": { "after": "P2D", "to": "compliance-review" },
+      "edges": [
+        { "to": "compliance-review", "condition": "contract attached" }
+      ]
+    },
+    {
+      "id": "compliance-review",
+      "kind": "approval",
+      "label": "Compliance review",
+      "approvers": ["compliance-officer"],
+      "edges": [
+        { "to": "legal-review", "condition": "needs another legal read" },
+        { "to": "approved", "condition": "clear" }
+      ],
+      "exceptions": [
+        { "to": "withdrawn" }
+      ]
+    },
+    {
+      "id": "security-review",
+      "kind": "approval",
+      "label": "Security review",
+      "approvers": ["security-officer", "data-protection-officer"],
+      "timeout": { "after": "P1D", "to": "approved" },
+      "edges": [
+        { "to": "approved", "condition": "no findings" }
+      ]
+    },
+    { "id": "approved", "kind": "outcome", "label": "Approved", "outcome": "approved" },
+    { "id": "withdrawn", "kind": "outcome", "label": "Withdrawn", "outcome": "withdrawn" }
+  ]
+}

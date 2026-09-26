@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1",
+  "name": "capital purchase approval",
+  "start": "intake-review",
+  "nodes": [
+    {
+      "id": "intake-review",
+      "kind": "approval",
+      "label": "Intake review",
+      "approvers": ["requesting-team-lead"],
+      "timeout": { "after": "P2D", "to": "escalate-to-operations" },
+      "edges": [
+        { "to": "finance-review", "condition": "amount >= 10000" },
+        { "to": "line-manager-review", "condition": "amount < 10000" }
+      ],
+      "exceptions": [
+        { "to": "withdrawn", "reason": "requester withdrew the request" }
+      ]
+    },
+    {
+      "id": "line-manager-review",
+      "kind": "approval",
+      "label": "Line manager review",
+      "approvers": ["line-manager"],
+      "timeout": { "after": "P3D", "to": "escalate-to-operations" },
+      "edges": [
+        { "to": "approved", "condition": "manager approves" },
+        { "to": "rejected", "condition": "manager declines" }
+      ]
+    },
+    {
+      "id": "finance-review",
+      "kind": "approval",
+      "label": "Finance review",
+      "approvers": ["finance-controller", "budget-owner"],
+      "timeout": { "after": "PT36H", "to": "escalate-to-operations" },
+      "edges": [
+        { "to": "director-review", "condition": "amount >= 50000" },
+        { "to": "approved", "condition": "amount < 50000 and budget available" },
+        { "to": "rejected", "condition": "no budget available" }
+      ],
+      "exceptions": [
+        { "to": "withdrawn", "reason": "requester withdrew the request" }
+      ]
+    },
+    {
+      "id": "director-review",
+      "kind": "approval",
+      "label": "Director review",
+      "approvers": ["division-director"],
+      "timeout": { "after": "P5D", "to": "escalate-to-operations" },
+      "edges": [
+        { "to": "approved", "condition": "director approves" },
+        { "to": "rejected", "condition": "director declines" }
+      ]
+    },
+    {
+      "id": "escalate-to-operations",
+      "kind": "approval",
+      "label": "Operations escalation",
+      "approvers": ["operations-duty-manager"],
+      "timeout": { "after": "P2D", "to": "rejected" },
+      "edges": [
+        { "to": "approved", "condition": "duty manager approves on behalf" },
+        { "to": "rejected", "condition": "duty manager declines" }
+      ]
+    },
+    { "id": "approved", "kind": "outcome", "label": "Approved", "outcome": "approved" },
+    { "id": "rejected", "kind": "outcome", "label": "Rejected", "outcome": "rejected" },
+    { "id": "withdrawn", "kind": "outcome", "label": "Withdrawn by requester", "outcome": "withdrawn" }
+  ]
+}
