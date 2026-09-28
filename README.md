@@ -23,15 +23,17 @@ generated document. A step labelled `<script>alert(1)</script>` renders as the w
 ## Install
 
 ```sh
-npm install approval-path-visualizer
+npm install github:edilec/approval-path-visualizer
 ```
+
+This installs the public GitHub source; `approval-path-visualizer` is not published to npm.
 
 Or run it from a checkout with `node bin/approval-path-visualizer.mjs`.
 
 ## Use
 
 ```sh
-approval-path-visualizer \
+npx approval-path-visualizer \
   --root examples/clean \
   --graph approval.json \
   --out build/approval-path.svg
